@@ -1,0 +1,44 @@
+# ── Application ───────────────────────────────────────────────────────────────
+spring.application.name=backend
+server.port=8081
+
+# ── Database ──────────────────────────────────────────────────────────────────
+spring.datasource.url=jdbc:postgresql://localhost:5432/scholarlinkghdb
+spring.datasource.username=postgres
+spring.datasource.password=YOUR_DB_PASSWORD
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.open-in-view=false
+
+# ── Mail ──────────────────────────────────────────────────────────────────────
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=YOUR_EMAIL
+spring.mail.password=YOUR_EMAIL_APP_PASSWORD
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+# ── JWT ───────────────────────────────────────────────────────────────────────
+# Generate your secret with this PowerShell command:
+# -join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
+jwt.secret=YOUR_64_CHAR_HEX_SECRET
+jwt.access-token-expiry-ms=1800000
+jwt.refresh-token-expiry-ms=604800000
+
+# ── Security ──────────────────────────────────────────────────────────────────
+security.allowed-origins=http://localhost:3000,https://scholarlink.gh
+
+# ── Rate Limiting ─────────────────────────────────────────────────────────────
+rate-limit.register.capacity=5
+rate-limit.register.refill-minutes=60
+rate-limit.login.capacity=10
+rate-limit.login.refill-minutes=15
+rate-limit.otp.capacity=5
+rate-limit.otp.refill-minutes=30
+rate-limit.general.capacity=30
+rate-limit.general.refill-minutes=1
+
+# ── Logging ───────────────────────────────────────────────────────────────────
+logging.level.org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer=ERROR
