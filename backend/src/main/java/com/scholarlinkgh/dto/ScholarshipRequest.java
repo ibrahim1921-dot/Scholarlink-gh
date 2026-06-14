@@ -1,7 +1,13 @@
 package com.scholarlinkgh.dto;
 
 import com.scholarlinkgh.entity.ScholarshipCategory;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Future;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import org.springframework.format.annotation.DateTimeFormat;
 
@@ -48,8 +54,8 @@ public class ScholarshipRequest {
     @NotBlank(message = "Official link is required")
     @Size(max = 500, message = "Official link must not exceed 500 characters")
     @Pattern(
-        regexp = "^https?://.*",
-        message = "Official link must be a valid URL starting with http:// or https://"
+        regexp = "^https?://[a-zA-Z0-9\\-._~:/?#\\[\\]@!$&'()*+,;=%]+$",
+        message = "Official link must be a valid HTTPS URL without special characters"
     )
     private String officialLink;
 

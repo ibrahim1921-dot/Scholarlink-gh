@@ -27,3 +27,7 @@ replay_pid*
 # Environment secrets — never commit
 application.properties
 .env
+# Personal Claude Code preferences — private to this machine
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/hooks/

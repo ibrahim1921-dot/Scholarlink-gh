@@ -5,12 +5,12 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
-import io.github.bucket4j.Refill;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -18,30 +18,25 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
- * IP-based Rate Limiting Filter using Bucket4j + Caffeine cache.
+ * IP-based rate limiting filter using Bucket4j + Caffeine.
  *
- * OWASP A04: Insecure Design — rate limiting prevents:
- *   - Brute-force login attacks
- *   - OTP enumeration attacks
- *   - Registration spam / account farming
- *   - Denial of service via endpoint flooding
+ * OWASP A04: prevents brute-force, OTP enumeration, and endpoint flooding.
  *
- * How it works:
- *   Each IP address gets its own "token bucket". The bucket starts full.
- *   Each request consumes one token. When empty, requests are rejected (429).
- *   Tokens refill gradually over time — so legitimate users recover quickly.
+ * X-Forwarded-For spoofing fix: the header is only trusted when the TCP
+ * connection originates from a known proxy IP (configured via
+ * security.trusted-proxy-ips). If the request comes directly from a client,
+ * getRemoteAddr() is used — which cannot be spoofed.
  *
- * Limits per endpoint:
- *   /register       → 5 requests per 60 minutes per IP
- *   /login          → 10 requests per 15 minutes per IP
- *   /verify-otp     → 5 requests per 30 minutes per IP
- *   /forgot-password→ 5 requests per 60 minutes per IP
- *   /refresh        → 30 requests per 1 minute per IP
- *   everything else → 60 requests per 1 minute per IP
+ * All limits are configurable via application.properties so they can be
+ * tuned without redeployment.
  */
 @Slf4j
 @Component
@@ -49,10 +44,51 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // ── Configurable limits (all read from application.properties) ────────────
+
+    @Value("${rate-limit.register.capacity:5}")
+    private int registerCapacity;
+    @Value("${rate-limit.register.refill-minutes:60}")
+    private int registerRefillMinutes;
+
+    @Value("${rate-limit.login.capacity:10}")
+    private int loginCapacity;
+    @Value("${rate-limit.login.refill-minutes:15}")
+    private int loginRefillMinutes;
+
+    @Value("${rate-limit.otp.capacity:5}")
+    private int otpCapacity;
+    @Value("${rate-limit.otp.refill-minutes:30}")
+    private int otpRefillMinutes;
+
+    @Value("${rate-limit.forgot.capacity:5}")
+    private int forgotCapacity;
+    @Value("${rate-limit.forgot.refill-minutes:60}")
+    private int forgotRefillMinutes;
+
+    @Value("${rate-limit.refresh.capacity:30}")
+    private int refreshCapacity;
+    @Value("${rate-limit.refresh.refill-minutes:1}")
+    private int refreshRefillMinutes;
+
+    @Value("${rate-limit.general.capacity:60}")
+    private int generalCapacity;
+    @Value("${rate-limit.general.refill-minutes:1}")
+    private int generalRefillMinutes;
+
     /**
-     * Caffeine cache: stores one Bucket per IP per endpoint-type.
-     * Buckets expire 2 hours after last access to free memory.
-     * Max 100,000 entries — enough for ~100k unique IPs before eviction.
+     * Comma-separated list of trusted reverse proxy IPs.
+     * Only from these IPs will X-Forwarded-For be trusted.
+     * Leave empty to disable proxy IP trust entirely (all requests use getRemoteAddr).
+     */
+    @Value("${security.trusted-proxy-ips:}")
+    private String trustedProxyIpsConfig;
+
+    private Set<String> trustedProxyIps;
+
+    /**
+     * Caffeine cache: one Bucket per (client-ip + endpoint-category).
+     * Max 100k entries; expire 2h after last access.
      */
     private final Cache<String, Bucket> bucketCache = Caffeine.newBuilder()
         .maximumSize(100_000)
@@ -66,109 +102,92 @@ public class RateLimitFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
+        initTrustedProxies();
+
         String path = request.getRequestURI();
         String clientIp = extractClientIp(request);
+        String category = resolveEndpointCategory(path);
+        String bucketKey = clientIp + ":" + category;
 
-        // Build a unique cache key: IP + endpoint category
-        // e.g. "192.168.1.1:login" or "10.0.0.5:register"
-        String bucketKey = clientIp + ":" + resolveEndpointCategory(path);
+        Bucket bucket = bucketCache.get(bucketKey, key -> createBucket(category));
 
-        // Get or create the bucket for this IP + endpoint combination
-        Bucket bucket = bucketCache.get(bucketKey, key -> createBucket(path));
-
-        // Try to consume one token from the bucket
         if (bucket.tryConsume(1)) {
-            // Token available — allow the request through
-            // Add remaining tokens in header so clients can self-throttle
-            long remainingTokens = bucket.getAvailableTokens();
-            response.setHeader("X-RateLimit-Remaining", String.valueOf(remainingTokens));
+            response.setHeader("X-RateLimit-Remaining",
+                String.valueOf(bucket.getAvailableTokens()));
             filterChain.doFilter(request, response);
         } else {
-            // No tokens left — reject with 429
-            log.warn("Rate limit exceeded for IP: {} on path: {}", clientIp, path);
+            log.warn("Rate limit exceeded: ip={} path={}", clientIp, path);
             sendRateLimitResponse(response);
         }
     }
 
-    /**
-     * Creates the right bucket configuration based on which endpoint is called.
-     * Different endpoints get different limits based on their abuse risk.
-     */
-    private Bucket createBucket(String path) {
-        String category = resolveEndpointCategory(path);
-
-        return switch (category) {
-            // Registration: 5 attempts per hour — prevents account farming
-            case "register" -> buildBucket(5, Duration.ofHours(1));
-
-            // Login: 10 attempts per 15 minutes — brute-force protection
-            case "login"    -> buildBucket(10, Duration.ofMinutes(15));
-
-            // OTP: 5 attempts per 30 minutes — prevents OTP enumeration
-            case "otp"      -> buildBucket(5, Duration.ofMinutes(30));
-
-            // Password reset: 5 per hour — prevents email spam
-            case "forgot"   -> buildBucket(5, Duration.ofHours(1));
-
-            // Token refresh: 30 per minute — app may refresh frequently
-            case "refresh"  -> buildBucket(30, Duration.ofMinutes(1));
-
-            // All other authenticated endpoints: 60 per minute
-            default         -> buildBucket(60, Duration.ofMinutes(1));
-        };
+    private void initTrustedProxies() {
+        if (trustedProxyIps == null) {
+            trustedProxyIps = Arrays.stream(trustedProxyIpsConfig.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toSet());
+        }
     }
 
     /**
-     * Builds a token bucket with the given capacity that fully refills
-     * after the given duration (greedy refill = refill all at once).
+     * Returns the real client IP.
+     *
+     * X-Forwarded-For is ONLY trusted when the direct TCP connection is from
+     * a configured trusted proxy. Otherwise getRemoteAddr() is used — this
+     * cannot be spoofed because it comes from the OS network stack.
+     *
+     * If no trusted proxies are configured, X-Forwarded-For is never trusted.
      */
-    private Bucket buildBucket(int capacity, Duration refillDuration) {
-    // Updated to Bucket4j 8.x non-deprecated API
-    // Bandwidth.builder() replaces the deprecated Bandwidth.classic()
-    Bandwidth limit = Bandwidth.builder()
-        .capacity(capacity)
-        .refillGreedy(capacity, refillDuration)
-        .build();
-    return Bucket.builder().addLimit(limit).build();
-}
+    private String extractClientIp(HttpServletRequest request) {
+        String remoteAddr = request.getRemoteAddr();
 
-    /**
-     * Maps request paths to rate limit categories.
-     * We categorise by risk level, not exact path.
-     */
+        if (!trustedProxyIps.isEmpty() && trustedProxyIps.contains(remoteAddr)) {
+            String forwarded = request.getHeader("X-Forwarded-For");
+            if (forwarded != null && !forwarded.isBlank()) {
+                // First IP in the chain is the original client
+                return forwarded.split(",")[0].trim();
+            }
+        }
+
+        return remoteAddr;
+    }
+
+    private Bucket createBucket(String category) {
+        return switch (category) {
+            case "register" -> buildBucket(registerCapacity,
+                                           Duration.ofMinutes(registerRefillMinutes));
+            case "login"    -> buildBucket(loginCapacity,
+                                           Duration.ofMinutes(loginRefillMinutes));
+            case "otp"      -> buildBucket(otpCapacity,
+                                           Duration.ofMinutes(otpRefillMinutes));
+            case "forgot"   -> buildBucket(forgotCapacity,
+                                           Duration.ofMinutes(forgotRefillMinutes));
+            case "refresh"  -> buildBucket(refreshCapacity,
+                                           Duration.ofMinutes(refreshRefillMinutes));
+            default         -> buildBucket(generalCapacity,
+                                           Duration.ofMinutes(generalRefillMinutes));
+        };
+    }
+
+    private Bucket buildBucket(int capacity, Duration refillDuration) {
+        Bandwidth limit = Bandwidth.builder()
+            .capacity(capacity)
+            .refillGreedy(capacity, refillDuration)
+            .build();
+        return Bucket.builder().addLimit(limit).build();
+    }
+
     private String resolveEndpointCategory(String path) {
         if (path.contains("/register"))        return "register";
         if (path.contains("/login"))           return "login";
-        if (path.contains("/verify-otp"))      return "otp";
+        if (path.contains("/verify-otp") ||
+            path.contains("/resend-otp"))      return "otp";
         if (path.contains("/forgot-password")) return "forgot";
         if (path.contains("/refresh"))         return "refresh";
         return "general";
     }
 
-    /**
-     * Extracts the real client IP address.
-     *
-     * When behind a reverse proxy (Nginx, Cloudflare), the real IP
-     * is in X-Forwarded-For, not the TCP connection IP.
-     * We check that header first, then fall back to getRemoteAddr().
-     *
-     * OWASP note: X-Forwarded-For can be spoofed by clients if your
-     * proxy isn't configured to overwrite it. In production, ensure
-     * your Nginx/Cloudflare config sets this header authoritatively.
-     */
-    private String extractClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            // X-Forwarded-For can be a comma-separated list; the first is the real client
-            return forwarded.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
-    }
-
-    /**
-     * Sends a clean, informative 429 response.
-     * Does NOT reveal internal details — just tells the client to slow down.
-     */
     private void sendRateLimitResponse(HttpServletResponse response) throws IOException {
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -176,8 +195,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         Map<String, Object> body = Map.of(
             "status", 429,
             "error", "Too Many Requests",
-            "message", "You have exceeded the request limit. Please wait before trying again.",
-            "retryAfter", "Please wait a few minutes before retrying."
+            "message", "You have exceeded the request limit. Please wait before trying again."
         );
 
         response.getWriter().write(objectMapper.writeValueAsString(body));

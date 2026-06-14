@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!DOCTYPE module PUBLIC
+    "-//Checkstyle//DTD Checkstyle Configuration 1.3//EN"
+    "https://checkstyle.org/dtds/configuration_1_3.dtd">
+
+<!--
+  Pragmatic Checkstyle config for ScholarLink GH backend.
+  Run with: mvn checkstyle:check  (from backend/)
+-->
+<module name="Checker">
+    <property name="severity" value="warning"/>
+    <property name="fileExtensions" value="java"/>
+
+    <!-- No tab characters — use 4 spaces -->
+    <module name="FileTabCharacter"/>
+
+    <!-- No trailing whitespace -->
+    <module name="RegexpSingleline">
+        <property name="format" value="\s+$"/>
+        <property name="message" value="Line has trailing whitespace."/>
+    </module>
+
+    <module name="TreeWalker">
+        <!-- Unused imports clutter the code and are easy to fix -->
+        <module name="UnusedImports">
+            <property name="severity" value="error"/>
+        </module>
+
+        <!-- Wildcard imports hide where classes come from -->
+        <module name="AvoidStarImport">
+            <property name="severity" value="error"/>
+        </module>
+
+        <!-- Warn on very long lines (140 is lenient enough for Spring annotations) -->
+        <module name="LineLength">
+            <property name="max" value="140"/>
+            <property name="severity" value="warning"/>
+        </module>
+
+        <!-- Consistent brace style -->
+        <module name="NeedBraces"/>
+
+        <!-- No empty catch blocks that silently swallow exceptions -->
+        <module name="EmptyCatchBlock">
+            <property name="severity" value="error"/>
+        </module>
+    </module>
+</module>

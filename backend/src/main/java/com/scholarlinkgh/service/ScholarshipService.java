@@ -5,10 +5,14 @@ import com.scholarlinkgh.dto.ScholarshipRequest;
 import com.scholarlinkgh.dto.ScholarshipResponse;
 import com.scholarlinkgh.entity.Scholarship;
 import com.scholarlinkgh.entity.ScholarshipCategory;
+import com.scholarlinkgh.entity.ScholarshipReport;
 import com.scholarlinkgh.entity.User;
 import com.scholarlinkgh.repository.ScholarshipRepository;
+import com.scholarlinkgh.repository.ScholarshipReportRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -23,33 +27,33 @@ import java.time.LocalDate;
 /**
  * Scholarship Service — all scholarship business logic.
  *
- * OWASP A01: Broken Access Control
- *   - Students can only see verified + active listings.
- *   - Only admins can create, verify, or deactivate listings.
- *   - Admin identity is pulled from the JWT token — never from
- *     the request body (prevents privilege escalation).
+ * OWASP A01: Students see only verified + active listings.
+ *            Admin identity always comes from the JWT security context.
  *
- * OWASP A04: Insecure Design
- *   - New listings default to verified=false, active=false.
- *     Admin must explicitly approve before students see it.
- *   - 3+ reports triggers automatic suspension.
+ * IDOR fix: per-user report tracking prevents a single user from gaming
+ * the auto-suspension threshold. Reports are recorded in scholarship_reports
+ * with a (scholarship_id, user_id) unique constraint.
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ScholarshipService {
 
+    private static final int AUTO_SUSPEND_THRESHOLD = 3;
+
     private final ScholarshipRepository scholarshipRepository;
+    private final ScholarshipReportRepository scholarshipReportRepository;
+    private final AuditService auditService;
 
     // ── Student Operations ────────────────────────────────────────────────────
 
     /**
-     * Returns paginated list of verified active scholarships.
-     * Supports optional filtering by category, country, field, and deadline.
-     *
-     * FR-08: students see scholarships matching their profile.
-     * FR-04: scholarships ordered by deadline (soonest first).
+     * Returns paginated verified active scholarships with optional filters.
+     * FR-08: filter by category, country, field, deadline.
+     * FR-04: ordered by deadline ascending (soonest first).
      */
+    @Transactional(readOnly = true)
+    @Cacheable(value = "scholarshipList", key = "#page + ':' + #size + ':' + #category + ':' + #country + ':' + #field + ':' + #deadline")
     public Page<ScholarshipResponse> getScholarships(
             int page,
             int size,
@@ -58,53 +62,50 @@ public class ScholarshipService {
             String field,
             String deadline
     ) {
-        // Cap page size at 50 to prevent abuse
         size = Math.min(size, 50);
-
         Pageable pageable = PageRequest.of(page, size, Sort.by("deadline").ascending());
 
-        // Convert category string to enum — null if not provided
         ScholarshipCategory categoryEnum = null;
         if (category != null && !category.isBlank()) {
             try {
                 categoryEnum = ScholarshipCategory.valueOf(category.toUpperCase());
             } catch (IllegalArgumentException ex) {
-                // Invalid category string — treat as no filter
-                log.warn("Invalid scholarship category filter: {}", category);
+                log.warn("Invalid scholarship category filter ignored: {}", category);
             }
         }
 
-        // Convert deadline filter to a cutoff date
         LocalDate deadlineCutoff = null;
         if (deadline != null) {
             deadlineCutoff = switch (deadline.toUpperCase()) {
                 case "URGENT" -> LocalDate.now().plusDays(7);
                 case "SOON"   -> LocalDate.now().plusDays(30);
-                default       -> null; // ALL — no deadline filter
+                default       -> null;
             };
         }
 
+        // Pre-lowercase here so the JPQL query can apply LOWER() only to the
+        // column side. The '%' wildcard is also appended here so the query
+        // needs no CONCAT() — passing CONCAT(:field, '%') with a null :field
+        // makes PostgreSQL infer bytea, causing a "text ~~ bytea" error.
         Page<Scholarship> scholarships = scholarshipRepository.findAllFiltered(
-    categoryEnum,
-    (country != null && !country.isBlank()) ? country : null,
-    (field != null && !field.isBlank()) ? field : null,
-    deadlineCutoff,
-    pageable
-);
-
+            categoryEnum,
+            (country != null && !country.isBlank()) ? country.toLowerCase() : null,
+            (field   != null && !field.isBlank())   ? field.toLowerCase() + "%" : null,
+            deadlineCutoff,
+            pageable
+        );
 
         return scholarships.map(ScholarshipResponse::from);
     }
 
     /**
-     * Returns full details of a single scholarship by ID.
-     * Only returns verified and active listings to students.
+     * Returns full details of a single verified active scholarship.
      */
+    @Transactional(readOnly = true)
     public ScholarshipResponse getScholarshipById(Long id) {
         Scholarship scholarship = scholarshipRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Scholarship not found"));
 
-        // Students can only see verified and active listings
         if (!scholarship.isVerified() || !scholarship.isActive()) {
             throw new RuntimeException("Scholarship not found");
         }
@@ -113,27 +114,51 @@ public class ScholarshipService {
     }
 
     /**
-     * Records a student report on a suspicious listing.
-     * 3+ reports automatically deactivates the listing.
+     * Records a student report for a suspicious listing.
      *
-     * OWASP A04: community-based fraud detection.
-     * FR-10: students can flag suspicious scholarships.
+     * IDOR fix: each user can report a given scholarship exactly once.
+     * The unique constraint on scholarship_reports(scholarship_id, user_id)
+     * enforces this at the database level as well.
+     *
+     * FR-17: three student reports trigger automatic suspension.
+     * Community-based fraud detection.
      */
     @Transactional
+    @CacheEvict(value = {"scholarshipList", "scholarshipDetail"}, allEntries = true)
     public ApiResponse reportScholarship(Long id) {
+        User reporter = getCurrentUser();
+
         Scholarship scholarship = scholarshipRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Scholarship not found"));
 
-        scholarship.setReportCount(scholarship.getReportCount() + 1);
-
-        // Auto-suspend if 3 or more reports received
-        if (scholarship.getReportCount() >= 3) {
-            scholarship.setActive(false);
-            log.warn("Scholarship ID {} auto-suspended after {} reports",
-                id, scholarship.getReportCount());
+        // Prevent duplicate reports from the same user
+        if (scholarshipReportRepository.existsByScholarshipAndReporter(scholarship, reporter)) {
+            return ApiResponse.builder()
+                .success(false)
+                .message("You have already reported this scholarship.")
+                .build();
         }
 
-        scholarshipRepository.save(scholarship);
+        // Record the report
+        ScholarshipReport report = ScholarshipReport.builder()
+            .scholarship(scholarship)
+            .reporter(reporter)
+            .build();
+        scholarshipReportRepository.save(report);
+
+        // Check total report count and auto-suspend if threshold reached
+        long totalReports = scholarshipReportRepository.countByScholarship(scholarship);
+        if (totalReports >= AUTO_SUSPEND_THRESHOLD) {
+            scholarship.setActive(false);
+            scholarship.setReportCount((int) totalReports);
+            scholarshipRepository.save(scholarship);
+            log.warn("Scholarship ID {} auto-suspended after {} unique reports", id, totalReports);
+        } else {
+            scholarship.setReportCount((int) totalReports);
+            scholarshipRepository.save(scholarship);
+        }
+
+        log.info("Scholarship ID {} reported by user: {}", id, reporter.getEmail());
 
         return ApiResponse.builder()
             .success(true)
@@ -144,18 +169,12 @@ public class ScholarshipService {
     // ── Admin Operations ──────────────────────────────────────────────────────
 
     /**
-     * Creates a new scholarship listing.
-     * Admin only — ROLE_ADMIN enforced at controller level.
-     *
-     * New listings start as unverified and inactive.
-     * Admin must separately call verify() to make it visible.
-     *
-     * OWASP A01: admin identity pulled from JWT token —
-     * never from the request body.
+     * Creates a new scholarship listing (admin only).
+     * New listings start as unverified and inactive — admin must verify separately.
      */
     @Transactional
+    @CacheEvict(value = {"scholarshipList", "scholarshipDetail"}, allEntries = true)
     public ScholarshipResponse createScholarship(ScholarshipRequest request) {
-        // Get the admin creating this listing from the security context
         User admin = getCurrentUser();
 
         Scholarship scholarship = Scholarship.builder()
@@ -171,7 +190,6 @@ public class ScholarshipService {
             .requirements(request.getRequirements())
             .selectionCriteria(request.getSelectionCriteria())
             .additionalNotes(request.getAdditionalNotes())
-            // OWASP A04: always start unverified and inactive
             .verified(false)
             .active(false)
             .reportCount(0)
@@ -180,16 +198,19 @@ public class ScholarshipService {
 
         Scholarship saved = scholarshipRepository.save(scholarship);
 
+        auditService.log(admin.getId(), admin.getEmail(),
+            "CREATE_SCHOLARSHIP", "Scholarship", saved.getId(), saved.getName());
+
         log.info("Admin {} created scholarship: {}", admin.getEmail(), saved.getName());
 
         return ScholarshipResponse.from(saved);
     }
 
     /**
-     * Updates an existing scholarship listing.
-     * Admin only.
+     * Updates an existing scholarship listing (admin only).
      */
     @Transactional
+    @CacheEvict(value = {"scholarshipList", "scholarshipDetail"}, allEntries = true)
     public ScholarshipResponse updateScholarship(Long id, ScholarshipRequest request) {
         Scholarship scholarship = scholarshipRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Scholarship not found"));
@@ -209,17 +230,20 @@ public class ScholarshipService {
 
         Scholarship updated = scholarshipRepository.save(scholarship);
 
-        log.info("Scholarship ID {} updated by admin {}", id, getCurrentUser().getEmail());
+        User admin = getCurrentUser();
+        auditService.log(admin.getId(), admin.getEmail(),
+            "UPDATE_SCHOLARSHIP", "Scholarship", id, updated.getName());
+
+        log.info("Scholarship ID {} updated by admin {}", id, admin.getEmail());
 
         return ScholarshipResponse.from(updated);
     }
 
     /**
-     * Verifies and activates a scholarship listing.
-     * Makes it visible to students immediately.
-     * Admin only.
+     * Verifies and activates a scholarship listing (admin only).
      */
     @Transactional
+    @CacheEvict(value = {"scholarshipList", "scholarshipDetail"}, allEntries = true)
     public ApiResponse verifyScholarship(Long id) {
         Scholarship scholarship = scholarshipRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Scholarship not found"));
@@ -228,7 +252,11 @@ public class ScholarshipService {
         scholarship.setActive(true);
         scholarshipRepository.save(scholarship);
 
-        log.info("Scholarship ID {} verified by admin {}", id, getCurrentUser().getEmail());
+        User admin = getCurrentUser();
+        auditService.log(admin.getId(), admin.getEmail(),
+            "VERIFY_SCHOLARSHIP", "Scholarship", id, scholarship.getName());
+
+        log.info("Scholarship ID {} verified by admin {}", id, admin.getEmail());
 
         return ApiResponse.builder()
             .success(true)
@@ -237,11 +265,10 @@ public class ScholarshipService {
     }
 
     /**
-     * Deactivates a scholarship listing without deleting it.
-     * Hidden from students but preserved for records.
-     * Admin only.
+     * Deactivates a scholarship without deleting it (admin only).
      */
     @Transactional
+    @CacheEvict(value = {"scholarshipList", "scholarshipDetail"}, allEntries = true)
     public ApiResponse deactivateScholarship(Long id) {
         Scholarship scholarship = scholarshipRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Scholarship not found"));
@@ -249,7 +276,11 @@ public class ScholarshipService {
         scholarship.setActive(false);
         scholarshipRepository.save(scholarship);
 
-        log.info("Scholarship ID {} deactivated by admin {}", id, getCurrentUser().getEmail());
+        User admin = getCurrentUser();
+        auditService.log(admin.getId(), admin.getEmail(),
+            "DEACTIVATE_SCHOLARSHIP", "Scholarship", id, scholarship.getName());
+
+        log.info("Scholarship ID {} deactivated by admin {}", id, admin.getEmail());
 
         return ApiResponse.builder()
             .success(true)
@@ -258,9 +289,9 @@ public class ScholarshipService {
     }
 
     /**
-     * Returns all pending (unverified) scholarship listings.
-     * Admin dashboard use only.
+     * Returns all pending (unverified) listings for admin review.
      */
+    @Transactional(readOnly = true)
     public Page<ScholarshipResponse> getPendingScholarships(int page, int size) {
         size = Math.min(size, 50);
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
@@ -271,13 +302,11 @@ public class ScholarshipService {
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
-     * Gets the currently authenticated user from the JWT security context.
-     * OWASP A01: identity always comes from the verified JWT token —
-     * never from user-supplied request data.
+     * Gets the authenticated user from the JWT security context.
+     * Identity always comes from the verified token — never from request data.
      */
     private User getCurrentUser() {
-        Authentication authentication =
-            SecurityContextHolder.getContext().getAuthentication();
-        return (User) authentication.getPrincipal();
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        return (User) auth.getPrincipal();
     }
 }

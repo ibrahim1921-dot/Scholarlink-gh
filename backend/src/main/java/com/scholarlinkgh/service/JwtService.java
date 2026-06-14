@@ -61,6 +61,13 @@ public class JwtService {
 
     private final JwtConfig jwtConfig;
 
+    // ── Expiry Accessors ──────────────────────────────────────────────────────
+
+    /** Returns refresh token lifetime in seconds (used to set DB expiry). */
+    public long getRefreshTokenExpirySeconds() {
+        return jwtConfig.getRefreshTokenExpiryMs() / 1000;
+    }
+
     // ── Token Generation ──────────────────────────────────────────────────────
 
     /**
@@ -73,7 +80,7 @@ public class JwtService {
      * Short-lived by design — limits damage window if a token is stolen.
      */
     public String generateAccessToken(UserDetails userDetails) {
-        return buildToken(new HashMap<>(), userDetails, jwtConfig.getAccessTokenExpiryMs());
+        return buildToken(new HashMap<>(), userDetails, jwtConfig.getAccessTokenExpiryMs(), "access");
     }
 
     /**
@@ -85,7 +92,7 @@ public class JwtService {
      * Default expiry: 7 days (JWT_REFRESH_EXPIRY env var).
      */
     public String generateRefreshToken(UserDetails userDetails) {
-        return buildToken(new HashMap<>(), userDetails, jwtConfig.getRefreshTokenExpiryMs());
+        return buildToken(new HashMap<>(), userDetails, jwtConfig.getRefreshTokenExpiryMs(), "refresh");
     }
 
     /**
@@ -102,7 +109,8 @@ public class JwtService {
     private String buildToken(
             Map<String, Object> extraClaims,
             UserDetails userDetails,
-            long expiryMs
+            long expiryMs,
+            String tokenType
     ) {
         // Guard: never build a token for a null or blank principal
         if (userDetails == null || !StringUtils.hasText(userDetails.getUsername())) {
@@ -112,6 +120,8 @@ public class JwtService {
         }
 
         long now = System.currentTimeMillis();
+
+        extraClaims.put("typ", tokenType);
 
         return Jwts.builder()
                 .claims(extraClaims)
@@ -143,6 +153,10 @@ public class JwtService {
      * Raw token is NEVER logged — only email and reason.
      */
     public boolean isTokenValid(String token, UserDetails userDetails) {
+        return isTokenValid(token, userDetails, null);
+    }
+
+    public boolean isTokenValid(String token, UserDetails userDetails, String requiredType) {
         try {
             if (!StringUtils.hasText(token)) {
                 log.warn("Token validation failed: token is null or blank");
@@ -150,16 +164,15 @@ public class JwtService {
             }
 
             final String email = extractEmail(token);
+            final String tokenType = extractTokenType(token);
 
             boolean valid = email != null
                     && email.equals(userDetails.getUsername())
-                    && !isTokenExpired(token);
+                    && !isTokenExpired(token)
+                    && (requiredType == null || requiredType.equals(tokenType));
 
             if (!valid) {
-                log.warn(
-                    "Token validation failed for [{}]: email mismatch or expired",
-                    userDetails.getUsername()
-                );
+                log.warn("Token validation failed for [{}]", userDetails.getUsername());
             }
 
             return valid;
@@ -185,6 +198,15 @@ public class JwtService {
             // OWASP A09: never swallow security events silently
             log.error("Unexpected token validation error: {}", ex.getMessage());
             return false;
+        }
+    }
+
+    public String extractTokenType(String token) {
+        try {
+            return extractClaim(token, claims -> claims.get("typ", String.class));
+        } catch (Exception ex) {
+            log.warn("Could not extract token type: {}", ex.getMessage());
+            return null;
         }
     }
 

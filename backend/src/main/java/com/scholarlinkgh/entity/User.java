@@ -1,6 +1,14 @@
 package com.scholarlinkgh.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.Builder;
@@ -79,6 +87,7 @@ public class User implements UserDetails {
      * FR-03: unverified accounts cannot log in.
      */
     @Column(nullable = false)
+    @Builder.Default
     private boolean enabled = false;
 
     /**
@@ -86,6 +95,7 @@ public class User implements UserDetails {
      * OWASP A07.
      */
     @Column(nullable = false)
+    @Builder.Default
     private boolean accountNonLocked = true;
 
     /**
@@ -93,7 +103,7 @@ public class User implements UserDetails {
      * FR-03: 6-digit code, expires after 10 minutes.
      * Cleared after successful verification.
      */
-    @Column(length = 6)
+    @Column(length = 64)
     private String otpCode;
 
     /**
@@ -101,6 +111,50 @@ public class User implements UserDetails {
      * Any verification attempt after this time is rejected.
      */
     private LocalDateTime otpExpiresAt;
+
+    /**
+     * Education level — determines which scholarships are shown.
+     * FR-08: SHS_GRADUATE or UNIVERSITY_GRADUATE.
+     */
+    @Column(length = 30)
+    private String educationLevel;
+
+    /**
+     * Password reset token (SHA-256 hex). Null when no reset is pending.
+     */
+    @Column(length = 64)
+    private String passwordResetToken;
+
+    /**
+     * When the password reset token expires (default 15 minutes).
+     */
+    private LocalDateTime passwordResetTokenExpiresAt;
+
+    /**
+     * Number of consecutive failed login attempts.
+     * Used for account lockout policy.
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private int failedLoginAttempts = 0;
+
+    /**
+     * When the account lock expires (null = not locked).
+     */
+    private LocalDateTime lockedUntil;
+
+    /**
+     * Last time the user made an authenticated request.
+     * Used to enforce 30-minute inactivity logout.
+     */
+    private LocalDateTime lastActivityAt;
+
+    /**
+     * When the user last accepted the document integrity disclaimer.
+     * FR-41: document uploads are blocked if this is null or older than 90 days.
+     * Users must re-accept annually.
+     */
+    private LocalDateTime documentDisclaimerAcceptedAt;
 
     // ── UserDetails contract ──────────────────────────────────────────────────
 
@@ -128,7 +182,10 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return accountNonLocked;
+        if (!accountNonLocked) return false;
+        // Timed lock: if lockedUntil is set and still in the future, account is locked
+        if (lockedUntil != null && LocalDateTime.now().isBefore(lockedUntil)) return false;
+        return true;
     }
 
     @Override

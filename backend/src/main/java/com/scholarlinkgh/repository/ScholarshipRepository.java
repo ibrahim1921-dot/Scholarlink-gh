@@ -22,17 +22,30 @@ import java.time.LocalDate;
 public interface ScholarshipRepository extends JpaRepository<Scholarship, Long> {
 
     /**
-     * Returns all verified and active scholarships.
-     * Supports optional filtering by category, country, and field.
-     * Paginated to avoid loading hundreds of records at once.
+     * Returns all verified and active scholarships with optional filters.
+     *
+     * IMPORTANT — caller contract to avoid PostgreSQL type-inference errors:
+     * <ul>
+     *   <li>{@code country} must be pre-lowercased or null.</li>
+     *   <li>{@code field} must be pre-lowercased with the trailing {@code %}
+     *       wildcard already appended (e.g. {@code "engineering%"}), or null.</li>
+     * </ul>
+     *
+     * LOWER() is applied only to entity columns, never to bind parameters.
+     * CONCAT() is avoided entirely for the same reason: when a bind parameter
+     * is null, PostgreSQL infers its type as {@code bytea}, and neither
+     * {@code lower(bytea)} nor the {@code text ~~ bytea} LIKE operator exist.
+     *
+     * Field search uses a trailing-wildcard LIKE so a B-tree index on
+     * eligibleFields can still be used for prefix matches.
      */
     @Query("""
         SELECT s FROM Scholarship s
         WHERE s.verified = true
         AND s.active = true
         AND (:#{#category} IS NULL OR s.category = :category)
-        AND (:country IS NULL OR s.destinationCountry = :country)
-        AND (:field IS NULL OR s.eligibleFields LIKE %:field%)
+        AND (:country IS NULL OR LOWER(s.destinationCountry) = :country)
+        AND (:field IS NULL OR LOWER(s.eligibleFields) LIKE :field)
         AND (:beforeDate IS NULL OR s.deadline <= :beforeDate)
         ORDER BY s.deadline ASC
     """)

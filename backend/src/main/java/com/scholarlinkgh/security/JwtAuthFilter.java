@@ -2,7 +2,6 @@ package com.scholarlinkgh.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.scholarlinkgh.service.JwtService;
-import org.springframework.lang.NonNull;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -23,6 +23,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Map;
 
+/**
+ * JWT authentication filter — validates the Bearer token on every request.
+ *
+ * Inactivity tracking is handled in AuthService.refresh() only — not here.
+ * Updating lastActivityAt on every request causes excessive DB writes under
+ * high traffic (NFR-10: 50k concurrent users).
+ */
 @Slf4j
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -31,15 +38,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper;
     private UserDetailsService userDetailsService;
 
-    // JwtService and ObjectMapper injected normally
-    public JwtAuthFilter(JwtService jwtService, ObjectMapper objectMapper) {
+    public JwtAuthFilter(
+            JwtService jwtService,
+            ObjectMapper objectMapper) {
         this.jwtService = jwtService;
         this.objectMapper = objectMapper;
     }
 
-    // UserDetailsService injected lazily to break the circular dependency
-    // SecurityConfig defines UserDetailsService, SecurityConfig needs JwtAuthFilter
-    // @Lazy tells Spring: don't inject this until first use, not at startup
+    // Lazy injection breaks the circular dependency:
+    // SecurityConfig → JwtAuthFilter → UserDetailsService → SecurityConfig
     @Autowired
     public void setUserDetailsService(@Lazy UserDetailsService userDetailsService) {
         this.userDetailsService = userDetailsService;
@@ -54,6 +61,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
+        // No Authorization header — pass through (let Spring Security handle 401 for protected routes)
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -72,10 +80,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (userEmail != null &&
                 SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                UserDetails userDetails =
-                    userDetailsService.loadUserByUsername(userEmail);
+                UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
-                if (jwtService.isTokenValid(jwt, userDetails)) {
+                // Only accept tokens with type=access — refresh tokens cannot be used for auth
+                if (jwtService.isTokenValid(jwt, userDetails, "access")) {
 
                     UsernamePasswordAuthenticationToken authToken =
                         new UsernamePasswordAuthenticationToken(
@@ -83,11 +91,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                             null,
                             userDetails.getAuthorities()
                         );
-
                     authToken.setDetails(
                         new WebAuthenticationDetailsSource().buildDetails(request)
                     );
-
                     SecurityContextHolder.getContext().setAuthentication(authToken);
 
                 } else {
@@ -100,7 +106,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (Exception ex) {
-            log.error("JWT authentication failed for request [{}]: {}",
+            log.error("JWT authentication error for [{}]: {}",
                 request.getRequestURI(), ex.getMessage());
             SecurityContextHolder.clearContext();
             sendUnauthorizedResponse(response, "Authentication failed");
@@ -110,10 +116,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private boolean isWellFormedToken(String token) {
         if (token == null || token.isBlank()) return false;
         String[] parts = token.split("\\.");
-        return parts.length == 3 &&
-               parts[0].length() > 0 &&
-               parts[1].length() > 0 &&
-               parts[2].length() > 0;
+        return parts.length == 3
+            && parts[0].length() > 0
+            && parts[1].length() > 0
+            && parts[2].length() > 0;
     }
 
     private void sendUnauthorizedResponse(

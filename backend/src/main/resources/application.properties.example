@@ -1,44 +1,102 @@
-# ── Application ───────────────────────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════
+#  ScholarLink GH — Application Properties
+#
+#  All secret/environment-specific values come from .env (loaded by
+#  spring-dotenv at startup). This file only contains Spring property
+#  keys and wires them to .env variables using ${VAR_NAME} syntax.
+#
+#  Do NOT put raw secrets here. Only ${} references and safe defaults.
+# ══════════════════════════════════════════════════════════════════════
+
+# ── Application ────────────────────────────────────────────────────────
 spring.application.name=backend
-server.port=8081
+server.port=${SERVER_PORT:8081}
 
-# ── Database ──────────────────────────────────────────────────────────────────
-spring.datasource.url=jdbc:postgresql://localhost:5432/scholarlinkghdb
-spring.datasource.username=postgres
-spring.datasource.password=YOUR_DB_PASSWORD
+# ── Database ───────────────────────────────────────────────────────────
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USERNAME}
+spring.datasource.password=${DB_PASSWORD}
 
+# DANGER: ddl-auto=update silently alters live tables on startup and can
+# cause irreversible data loss in production. Use 'validate' once the
+# schema is stable. Keep 'update' only during early local development.
 spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=true
-spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.show-sql=false
+spring.jpa.properties.hibernate.format_sql=false
 spring.jpa.open-in-view=false
 
-# ── Mail ──────────────────────────────────────────────────────────────────────
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=YOUR_EMAIL
-spring.mail.password=YOUR_EMAIL_APP_PASSWORD
+# ── Mail ───────────────────────────────────────────────────────────────
+spring.mail.host=${MAIL_HOST:smtp.gmail.com}
+spring.mail.port=${MAIL_PORT:587}
+spring.mail.username=${MAIL_USERNAME}
+spring.mail.password=${MAIL_PASSWORD}
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 
-# ── JWT ───────────────────────────────────────────────────────────────────────
-# Generate your secret with this PowerShell command:
-# -join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
-jwt.secret=YOUR_64_CHAR_HEX_SECRET
-jwt.access-token-expiry-ms=1800000
-jwt.refresh-token-expiry-ms=604800000
+# ── JWT ────────────────────────────────────────────────────────────────
+jwt.secret=${JWT_SECRET}
+jwt.access-token-expiry-ms=${JWT_ACCESS_TOKEN_EXPIRY_MS:1800000}
+jwt.refresh-token-expiry-ms=${JWT_REFRESH_TOKEN_EXPIRY_MS:604800000}
 
-# ── Security ──────────────────────────────────────────────────────────────────
-security.allowed-origins=http://localhost:3000,https://scholarlink.gh
+# ── Security ───────────────────────────────────────────────────────────
+security.allowed-origins=${ALLOWED_ORIGINS:http://localhost:3000}
+security.inactivity-timeout-minutes=${INACTIVITY_TIMEOUT_MINUTES:30}
+security.trusted-proxy-ips=${TRUSTED_PROXY_IPS:}
 
-# ── Rate Limiting ─────────────────────────────────────────────────────────────
-rate-limit.register.capacity=5
-rate-limit.register.refill-minutes=60
-rate-limit.login.capacity=10
-rate-limit.login.refill-minutes=15
-rate-limit.otp.capacity=5
-rate-limit.otp.refill-minutes=30
-rate-limit.general.capacity=30
-rate-limit.general.refill-minutes=1
+# ── Auth Policy ────────────────────────────────────────────────────────
+auth.max-failed-attempts=${MAX_FAILED_LOGIN_ATTEMPTS:5}
+auth.lockout-minutes=${ACCOUNT_LOCKOUT_MINUTES:15}
+auth.reset-token-expiry-minutes=${RESET_TOKEN_EXPIRY_MINUTES:15}
 
-# ── Logging ───────────────────────────────────────────────────────────────────
+# ── OTP ────────────────────────────────────────────────────────────────
+otp.expiry-minutes=${OTP_EXPIRY_MINUTES:10}
+otp.email-subject=${OTP_EMAIL_SUBJECT:ScholarLink GH Verification Code}
+
+# ── Rate Limiting ──────────────────────────────────────────────────────
+rate-limit.register.capacity=${RATE_LIMIT_REGISTER_CAPACITY:5}
+rate-limit.register.refill-minutes=${RATE_LIMIT_REGISTER_REFILL_MINUTES:60}
+rate-limit.login.capacity=${RATE_LIMIT_LOGIN_CAPACITY:10}
+rate-limit.login.refill-minutes=${RATE_LIMIT_LOGIN_REFILL_MINUTES:15}
+rate-limit.otp.capacity=${RATE_LIMIT_OTP_CAPACITY:5}
+rate-limit.otp.refill-minutes=${RATE_LIMIT_OTP_REFILL_MINUTES:30}
+rate-limit.forgot.capacity=${RATE_LIMIT_FORGOT_CAPACITY:5}
+rate-limit.forgot.refill-minutes=${RATE_LIMIT_FORGOT_REFILL_MINUTES:60}
+rate-limit.refresh.capacity=${RATE_LIMIT_REFRESH_CAPACITY:30}
+rate-limit.refresh.refill-minutes=${RATE_LIMIT_REFRESH_REFILL_MINUTES:1}
+rate-limit.general.capacity=${RATE_LIMIT_GENERAL_CAPACITY:60}
+rate-limit.general.refill-minutes=${RATE_LIMIT_GENERAL_REFILL_MINUTES:1}
+
+# ── Admin Bootstrap ────────────────────────────────────────────────────
+admin.bootstrap.email=${ADMIN_EMAIL}
+admin.bootstrap.password=${ADMIN_PASSWORD}
+admin.bootstrap.username=${ADMIN_USERNAME:ScholarLink Admin}
+
+# ── Google Gemini AI ───────────────────────────────────────────────────
+gemini.api-key=${GEMINI_API_KEY:}
+gemini.api-url=${GEMINI_API_URL:https://generativelanguage.googleapis.com/v1beta/models}
+gemini.model=${GEMINI_MODEL:gemini-1.5-flash}
+gemini.max-tokens=${GEMINI_MAX_TOKENS:4096}
+gemini.temperature=${GEMINI_TEMPERATURE:0.7}
+gemini.connect-timeout-seconds=${GEMINI_CONNECT_TIMEOUT_SECONDS:30}
+gemini.read-timeout-seconds=${GEMINI_READ_TIMEOUT_SECONDS:60}
+gemini.write-timeout-seconds=${GEMINI_WRITE_TIMEOUT_SECONDS:30}
+gemini.match-cache-hours=${GEMINI_MATCH_CACHE_HOURS:24}
+gemini.max-scholarships-in-prompt=${GEMINI_MAX_SCHOLARSHIPS_IN_PROMPT:50}
+
+# ── Firebase Admin SDK ─────────────────────────────────────────────────
+firebase.service-account-key-path=${FIREBASE_SERVICE_ACCOUNT_KEY_PATH:}
+firebase.project-id=${FIREBASE_PROJECT_ID:}
+
+# ── Document Upload ────────────────────────────────────────────────────
+document.upload.directory=${DOCUMENT_UPLOAD_DIR:uploads}
+document.max-file-size-mb=${DOCUMENT_MAX_FILE_SIZE_MB:10}
+document.disclaimer-validity-days=${DOCUMENT_DISCLAIMER_VALIDITY_DAYS:90}
+
+# Spring multipart limits (derived from document.max-file-size-mb)
+spring.servlet.multipart.enabled=true
+spring.servlet.multipart.max-file-size=10MB
+spring.servlet.multipart.max-request-size=15MB
+
+# ── Logging ────────────────────────────────────────────────────────────
+logging.level.com.scholarlinkgh=INFO
 logging.level.org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer=ERROR

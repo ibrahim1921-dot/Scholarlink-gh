@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -16,6 +17,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -29,6 +31,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -38,20 +41,23 @@ public class SecurityConfig {
     private final UserRepository userRepository;
     private final JwtAuthFilter jwtAuthFilter;
     private final RateLimitFilter rateLimitFilter;
+    private final ConfigurableEnvironment environment;
 
     @Value("${security.allowed-origins}")
     private List<String> allowedOrigins;
 
     // Constructor injection without @RequiredArgsConstructor
     // to avoid circular dependency — JwtAuthFilter depends on
-    // UserDetailsService which must be created before SecurityConfig
+    // ,UserDetailsService, which must be created before SecurityConfig
     public SecurityConfig(
             UserRepository userRepository,
             JwtAuthFilter jwtAuthFilter,
-            RateLimitFilter rateLimitFilter) {
+            RateLimitFilter rateLimitFilter,
+            ConfigurableEnvironment environment) {
         this.userRepository = userRepository;
         this.jwtAuthFilter = jwtAuthFilter;
         this.rateLimitFilter = rateLimitFilter;
+        this.environment = environment;
     }
 
     @Bean
@@ -60,9 +66,9 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .headers(headers -> headers
-                .contentTypeOptions(contentType -> {})
+                .contentTypeOptions(Customizer.withDefaults())
                 .frameOptions(frame -> frame.deny())
-                .xssProtection(xss -> {})
+                .xssProtection(Customizer.withDefaults())
                 .referrerPolicy(referrer ->
                     referrer.policy(
                         ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN
@@ -84,11 +90,14 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST,
                     "/api/v1/auth/register",
                     "/api/v1/auth/verify-otp",
+                    "/api/v1/auth/resend-otp",
                     "/api/v1/auth/login",
                     "/api/v1/auth/refresh",
                     "/api/v1/auth/forgot-password",
                     "/api/v1/auth/reset-password"
                 ).permitAll()
+                // Multipart file uploads — allow any authenticated user
+                .requestMatchers(HttpMethod.POST, "/api/v1/documents/upload").authenticated()
                 .anyRequest().authenticated()
             )
             .sessionManagement(session ->
@@ -97,6 +106,14 @@ public class SecurityConfig {
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+
+        // NFR-05: enforce HTTPS in production profiles only
+        // In dev profile, HTTP is allowed for local development
+        if (!Arrays.asList(environment.getActiveProfiles()).contains("dev")){
+            http.requiresChannel(channel ->
+                channel.anyRequest().requiresSecure()
+            );
+        }
 
         return http.build();
     }

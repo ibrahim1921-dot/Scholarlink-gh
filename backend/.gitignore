@@ -1,0 +1,36 @@
+# ── Compiled output ────────────────────────────────────────────────────
+target/
+*.class
+
+# ── Spring Boot app config (contains secrets — never commit) ───────────
+src/main/resources/application.properties
+
+# ── Environment variables (contains secrets — never commit) ────────────
+# .env.example IS committed as a template (safe — no real values)
+.env
+
+# ── IDE files ──────────────────────────────────────────────────────────
+.idea/
+*.iml
+.vscode/
+*.project
+*.classpath
+.settings/
+
+# ── OS files ───────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Maven wrapper cache ────────────────────────────────────────────────
+.mvn/wrapper/maven-wrapper.jar
+
+# ── Document uploads (runtime storage — not part of the codebase) ──────
+uploads/
+
+# ── Firebase service account key (never commit) ────────────────────────
+firebase-service-account*.json
+serviceAccountKey*.json
+
+# Project summary
+docs/
+*.md
