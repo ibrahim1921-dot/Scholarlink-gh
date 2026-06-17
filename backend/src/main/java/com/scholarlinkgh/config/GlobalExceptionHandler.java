@@ -11,6 +11,10 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import com.scholarlinkgh.exception.ResourceNotFoundException;
+
+
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -101,6 +105,34 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
             "success", false,
             "message", "You do not have permission to perform this action."
+        ));
+    }
+
+    /**
+     * Missing required request part (file upload without file, etc.).
+     */
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    public ResponseEntity<Map<String, Object>> handleMissingServletRequestPart(
+            MissingServletRequestPartException ex) {
+
+        log.warn("Missing request part: {}", ex.getRequestPartName());
+        return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Required part '" + ex.getRequestPartName() + "' is missing."
+        ));
+    }
+
+    /**
+     * Requested resource (job, scholarship, document) not found.
+     */
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleResourceNotFound(
+            ResourceNotFoundException ex) {
+
+        log.warn("Resource not found: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
+                "success", false,
+                "message", ex.getMessage()
         ));
     }
 

@@ -48,6 +48,7 @@ C:\Users\Administrator\Desktop\Scholarlink\backend\src\main\java\com\scholarlink
 C:\Users\Administrator\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\StudentProfile.java
 C:\Users\Administrator\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\User.java
 C:\Users\Administrator\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\VerificationStatus.java
+C:\Users\Administrator\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\exception\ResourceNotFoundException.java
 C:\Users\Administrator\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\ApplicationTrackerRepository.java
 C:\Users\Administrator\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\AuditLogRepository.java
 C:\Users\Administrator\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\DocumentUploadRepository.java

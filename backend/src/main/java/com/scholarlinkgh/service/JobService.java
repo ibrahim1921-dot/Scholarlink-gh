@@ -18,6 +18,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.scholarlinkgh.exception.ResourceNotFoundException;
 
 import java.util.List;
 
@@ -121,7 +122,7 @@ public class JobService {
         User user = getCurrentUser();
 
         JobListing job = jobListingRepository.findById(jobId)
-            .orElseThrow(() -> new RuntimeException("Job listing not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Job listing not found"));
 
         if (!job.isActive()) {
             return ApiResponse.builder().success(false)
@@ -174,7 +175,7 @@ public class JobService {
         User user = getCurrentUser();
 
         JobListing job = jobListingRepository.findById(jobId)
-            .orElseThrow(() -> new RuntimeException("Job listing not found"));
+            .orElseThrow(() -> new ResourceNotFoundException("Job listing not found"));
 
         return geminiAIService.generateCoverLetter(
             user,
