@@ -143,12 +143,6 @@
             <artifactId>jackson-databind</artifactId>
         </dependency>
 
-        <!-- Firebase Admin SDK — FCM push notifications (FR-27-29) -->
-        <dependency>
-            <groupId>com.google.firebase</groupId>
-            <artifactId>firebase-admin</artifactId>
-            <version>9.2.0</version>
-        </dependency>
 
         <!-- Apache PDFBox — extract text from uploaded PDF documents (FR-38) -->
         <dependency>

@@ -22,9 +22,9 @@ import java.util.Map;
 /**
  * ProfileController — REST endpoints for student profile management.
  *
- * GET  /api/v1/profile         — retrieve the authenticated student's profile
- * PUT  /api/v1/profile         — create or update the profile
- * POST /api/v1/profile/fcm-token — register FCM device token (FR-27-29)
+ * GET  /api/v1/profile           — retrieve the authenticated student's profile
+ * PUT  /api/v1/profile           — create or update the profile
+ * POST /api/v1/profile/push-token — register Expo push token (FR-27-29)
  *
  * Profile data drives AI matching (FR-09), profile strength scoring (FR-10),
  * and personal statement generation (FR-19).
@@ -115,30 +115,30 @@ public class ProfileController {
     }
 
     /**
-     * POST /api/v1/profile/fcm-token
+     * POST /api/v1/profile/push-token
      *
-     * Registers or updates the student's FCM device token.
+     * Registers or updates the student's Expo push token.
      * Required for push notifications (FR-27-29).
      *
-     * Request body: { "token": "FCM_DEVICE_TOKEN" }
+     * Request body: { "token": "ExponentPushToken[...]" }
      */
-    @PostMapping("/fcm-token")
-    public ResponseEntity<ApiResponse> registerFcmToken(@RequestBody Map<String, String> body) {
+    @PostMapping("/push-token")
+    public ResponseEntity<ApiResponse> registerPushToken(@RequestBody Map<String, String> body) {
         User user = getCurrentUser();
         String token = body.getOrDefault("token", "");
 
         if (token.isBlank()) {
             return ResponseEntity.badRequest().body(
-                ApiResponse.builder().success(false).message("FCM token is required").build());
+                ApiResponse.builder().success(false).message("Push token is required").build());
         }
 
         StudentProfile profile = profileRepository.findByUser(user)
             .orElse(StudentProfile.builder().user(user).build());
 
-        profile.setFcmToken(token);
+        profile.setExpoPushToken(token);
         profileRepository.save(profile);
 
-        log.info("FCM token registered for user {}", user.getEmail());
+        log.info("Push token registered for user {}", user.getEmail());
         return ResponseEntity.ok(ApiResponse.builder()
             .success(true)
             .message("Push notification token registered.")

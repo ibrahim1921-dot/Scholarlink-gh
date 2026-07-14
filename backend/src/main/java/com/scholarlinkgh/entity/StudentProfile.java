@@ -91,15 +91,15 @@ public class StudentProfile {
     /** Whether the student has demonstrated financial need. */
     private boolean financialNeed;
 
-    // ── FCM push notifications ─────────────────────────────────────────────────
+    // ── Push notifications ──────────────────────────────────────────────────────
 
     /**
-     * Firebase Cloud Messaging device token.
+     * Expo Push Notification token (e.g. "ExponentPushToken[xxx]").
      * FR-27-29: required to send push notifications to this student's device.
      * Null means the student has not granted notification permissions.
      */
-    @Column(length = 500)
-    private String fcmToken;
+    @Column(name = "expo_push_token", length = 500)
+    private String expoPushToken;
 
     // ── AI-computed fields ─────────────────────────────────────────────────────
 
