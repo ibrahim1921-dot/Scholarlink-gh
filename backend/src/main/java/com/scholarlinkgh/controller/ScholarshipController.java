@@ -63,6 +63,33 @@ public class ScholarshipController {
     }
 
     /**
+     * GET /api/v1/scholarships/saved
+     * Returns the authenticated user's full list of saved scholarships.
+     *
+     * Requires: valid JWT token (any role)
+     */
+    @GetMapping("/saved")
+    public ResponseEntity<java.util.List<ScholarshipResponse>> getSavedScholarships() {
+        return ResponseEntity.ok(scholarshipService.getSavedScholarships());
+    }
+
+    /**
+     * POST /api/v1/scholarships/{id}/save
+     * Toggles saved state for the authenticated user.
+     *
+     * Requires: valid JWT token (any role)
+     */
+    @PostMapping("/{id}/save")
+    public ResponseEntity<java.util.Map<String, Boolean>> toggleSaveScholarship(
+            @PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(scholarshipService.toggleSaveScholarship(id));
+        } catch (RuntimeException ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
      * GET /api/v1/scholarships/{id}
      * Returns full details of a single scholarship.
      *

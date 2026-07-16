@@ -19,3 +19,4 @@ com\scholarlinkgh\integration\DocumentIntegrationTest$DisclaimerStatus.class
 com\scholarlinkgh\integration\AIIntegrationTest$GetScholarshipMatches.class
 com\scholarlinkgh\integration\JobIntegrationTest$GetMyApplications.class
 com\scholarlinkgh\integration\ScholarshipIntegrationTest.class
+com\scholarlinkgh\ProfileCompletenessTest.class

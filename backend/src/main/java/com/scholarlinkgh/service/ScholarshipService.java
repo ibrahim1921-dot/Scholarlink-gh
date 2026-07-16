@@ -9,6 +9,8 @@ import com.scholarlinkgh.entity.ScholarshipReport;
 import com.scholarlinkgh.entity.User;
 import com.scholarlinkgh.repository.ScholarshipRepository;
 import com.scholarlinkgh.repository.ScholarshipReportRepository;
+import com.scholarlinkgh.repository.SavedScholarshipRepository;
+import com.scholarlinkgh.entity.SavedScholarship;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -43,6 +45,7 @@ public class ScholarshipService {
 
     private final ScholarshipRepository scholarshipRepository;
     private final ScholarshipReportRepository scholarshipReportRepository;
+    private final SavedScholarshipRepository savedScholarshipRepository;
     private final AuditService auditService;
 
     // ── Student Operations ────────────────────────────────────────────────────
@@ -111,6 +114,43 @@ public class ScholarshipService {
         }
 
         return ScholarshipResponse.from(scholarship);
+    }
+
+    /**
+     * Toggles the saved status of a scholarship for the current user.
+     */
+    @Transactional
+    public java.util.Map<String, Boolean> toggleSaveScholarship(Long id) {
+        User student = getCurrentUser();
+        Scholarship scholarship = scholarshipRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Scholarship not found"));
+
+        boolean exists = savedScholarshipRepository.existsByStudentAndScholarship(student, scholarship);
+        if (exists) {
+            savedScholarshipRepository.deleteByStudentAndScholarship(student, scholarship);
+            return java.util.Map.of("saved", false);
+        } else {
+            SavedScholarship saved = SavedScholarship.builder()
+                .student(student)
+                .scholarship(scholarship)
+                .build();
+            savedScholarshipRepository.save(saved);
+            return java.util.Map.of("saved", true);
+        }
+    }
+
+    /**
+     * Returns the current user's saved scholarships.
+     */
+    @Transactional(readOnly = true)
+    public java.util.List<ScholarshipResponse> getSavedScholarships() {
+        User student = getCurrentUser();
+        return savedScholarshipRepository.findAllByStudentOrderBySavedAtDesc(student)
+            .stream()
+            .map(SavedScholarship::getScholarship)
+            .filter(s -> s.isVerified() && s.isActive())
+            .map(ScholarshipResponse::from)
+            .toList();
     }
 
     /**

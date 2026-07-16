@@ -51,6 +51,23 @@ public class ApplicationTrackerService {
     }
 
     /**
+     * Returns a specific application tracker by ID for the authenticated student.
+     */
+    @Transactional(readOnly = true)
+    public ApplicationTrackerResponse getTracker(Long trackerId) {
+        User user = getCurrentUser();
+        
+        ApplicationTracker tracker = trackerRepository.findById(trackerId)
+            .orElseThrow(() -> new RuntimeException("Tracker not found"));
+            
+        if (!tracker.getStudent().getId().equals(user.getId())) {
+            throw new SecurityException("Access denied");
+        }
+        
+        return ApplicationTrackerResponse.from(tracker);
+    }
+
+    /**
      * Creates a new application tracker for a scholarship.
      * Prevents duplicate trackers for the same student/scholarship combination.
      */

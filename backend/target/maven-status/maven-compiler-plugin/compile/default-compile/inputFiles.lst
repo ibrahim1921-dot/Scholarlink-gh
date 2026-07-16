@@ -36,10 +36,12 @@ C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\sc
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\AuditLog.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\DocumentType.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\DocumentUpload.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\EligibilityCheck.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\JobApplication.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\JobListing.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\RefreshToken.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\Role.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\SavedScholarship.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\Scholarship.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ScholarshipCategory.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ScholarshipMatch.java
@@ -51,9 +53,11 @@ C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\sc
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\ApplicationTrackerRepository.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\AuditLogRepository.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\DocumentUploadRepository.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\EligibilityCheckRepository.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\JobApplicationRepository.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\JobListingRepository.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\RefreshTokenRepository.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\SavedScholarshipRepository.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\ScholarshipMatchRepository.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\ScholarshipReportRepository.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\ScholarshipRepository.java

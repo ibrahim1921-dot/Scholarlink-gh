@@ -146,7 +146,7 @@ public class GlobalExceptionHandler {
         log.error("Unhandled runtime exception: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
             "success", false,
-            "message", "An unexpected error occurred. Please try again."
+            "message", "Error: " + ex.toString() + " at " + (ex.getStackTrace().length > 0 ? ex.getStackTrace()[0].toString() : "unknown")
         ));
     }
 
@@ -159,7 +159,7 @@ public class GlobalExceptionHandler {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
             "success", false,
-            "message", "An unexpected error occurred. Please try again."
+            "message", "Error: " + ex.toString() + " at " + (ex.getStackTrace().length > 0 ? ex.getStackTrace()[0].toString() : "unknown")
         ));
     }
 }

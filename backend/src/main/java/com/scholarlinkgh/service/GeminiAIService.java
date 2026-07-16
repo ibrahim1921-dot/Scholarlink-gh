@@ -4,10 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.scholarlinkgh.entity.EligibilityCheck;
 import com.scholarlinkgh.entity.Scholarship;
 import com.scholarlinkgh.entity.ScholarshipMatch;
 import com.scholarlinkgh.entity.StudentProfile;
 import com.scholarlinkgh.entity.User;
+import com.scholarlinkgh.repository.EligibilityCheckRepository;
 import com.scholarlinkgh.repository.ScholarshipMatchRepository;
 import com.scholarlinkgh.repository.ScholarshipRepository;
 import com.scholarlinkgh.repository.StudentProfileRepository;
@@ -91,6 +93,7 @@ public class GeminiAIService {
     private final ScholarshipRepository scholarshipRepository;
     private final ScholarshipMatchRepository scholarshipMatchRepository;
     private final StudentProfileRepository studentProfileRepository;
+    private final EligibilityCheckRepository eligibilityCheckRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Built in @PostConstruct after @Value fields are injected
@@ -99,10 +102,12 @@ public class GeminiAIService {
     public GeminiAIService(
             ScholarshipRepository scholarshipRepository,
             ScholarshipMatchRepository scholarshipMatchRepository,
-            StudentProfileRepository studentProfileRepository) {
+            StudentProfileRepository studentProfileRepository,
+            EligibilityCheckRepository eligibilityCheckRepository) {
         this.scholarshipRepository = scholarshipRepository;
         this.scholarshipMatchRepository = scholarshipMatchRepository;
         this.studentProfileRepository = studentProfileRepository;
+        this.eligibilityCheckRepository = eligibilityCheckRepository;
     }
 
     @PostConstruct
@@ -188,7 +193,18 @@ public class GeminiAIService {
      * @param scholarship  the scholarship to check against
      * @return JSON string with eligibility details (parsed by the controller)
      */
+    @Transactional
     public String checkEligibility(User user, Scholarship scholarship) {
+        // Check for fresh cached results
+        LocalDateTime cacheThreshold = LocalDateTime.now().minusHours(matchCacheHours);
+        Optional<EligibilityCheck> cached =
+            eligibilityCheckRepository.findFreshEligibilityCheck(user, scholarship, cacheThreshold);
+
+        if (cached.isPresent()) {
+            log.info("Returning cached eligibility check for user={}, scholarship={}", user.getEmail(), scholarship.getId());
+            return cached.get().getEligibilityDetails();
+        }
+
         StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
         if (profile == null) {
             return buildErrorJson("Complete your profile first to check eligibility.");
@@ -204,7 +220,29 @@ public class GeminiAIService {
         }
 
         log.debug("Gemini eligibility raw response: {}", rawResponse);
-        return extractJsonBlock(rawResponse);
+        String jsonBlock = extractJsonBlock(rawResponse);
+
+        // Parse the JSON block to extract the 'meets' boolean for isEligible field
+        boolean isEligible = false;
+        try {
+            JsonNode root = objectMapper.readTree(jsonBlock);
+            isEligible = root.path("meets").asBoolean(false);
+        } catch (Exception e) {
+            log.warn("Failed to parse 'meets' boolean from Gemini eligibility response: {}", e.getMessage());
+        }
+
+        // Persist new check, clearing any stale records first
+        eligibilityCheckRepository.deleteByStudentAndScholarship(user, scholarship);
+        
+        EligibilityCheck check = EligibilityCheck.builder()
+            .student(user)
+            .scholarship(scholarship)
+            .isEligible(isEligible)
+            .eligibilityDetails(jsonBlock)
+            .build();
+        eligibilityCheckRepository.save(check);
+
+        return jsonBlock;
     }
 
     // ── FR-19: Personal Statement Generator ───────────────────────────────────

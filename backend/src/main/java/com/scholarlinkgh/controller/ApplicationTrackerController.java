@@ -50,6 +50,21 @@ public class ApplicationTrackerController {
     }
 
     /**
+     * GET /api/v1/trackers/{id}
+     * Returns a specific scholarship tracker for the authenticated student.
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<ApplicationTrackerResponse> getTracker(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(trackerService.getTracker(id));
+        } catch (SecurityException ex) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        } catch (RuntimeException ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
      * POST /api/v1/trackers
      * Starts tracking a scholarship.
      * Body: { scholarship_id }

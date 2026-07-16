@@ -138,11 +138,68 @@ public class ProfileController {
         profile.setExpoPushToken(token);
         profileRepository.save(profile);
 
-        log.info("Push token registered for user {}", user.getEmail());
         return ResponseEntity.ok(ApiResponse.builder()
             .success(true)
             .message("Push notification token registered.")
             .build());
+    }
+
+    /**
+     * GET /api/v1/profile/completeness
+     *
+     * Calculates the profile completeness score (0-100) based on 6 core fields:
+     * institution, fieldOfStudy, gpa, countryPreference, financialNeed, languageProficiency.
+     */
+    @GetMapping("/completeness")
+    public ResponseEntity<Map<String, Object>> getProfileCompleteness() {
+        User user = getCurrentUser();
+        StudentProfile profile = profileRepository.findByUser(user).orElse(null);
+
+        if (profile == null) {
+            return ResponseEntity.ok(Map.of(
+                "completeness", 0,
+                "next_step", "/profile-setup"
+            ));
+        }
+
+        int filledFields = 0;
+        int totalFields = 6;
+        String nextStep = "/profile-setup";
+
+        boolean hasInstitution = profile.getInstitution() != null && !profile.getInstitution().isBlank();
+        boolean hasField = profile.getFieldOfStudy() != null && !profile.getFieldOfStudy().isBlank();
+        boolean hasGpa = profile.getGpa() != null;
+        
+        if (hasInstitution && hasField && hasGpa) {
+            nextStep = "/profile-setup-step-2";
+        }
+
+        boolean hasCountry = profile.getCountryPreference() != null && !profile.getCountryPreference().isBlank();
+        // Assume financialNeed is filled
+        
+        if (hasInstitution && hasField && hasGpa && hasCountry) {
+            nextStep = "/profile-setup-step-3";
+        }
+
+        if (hasInstitution) filledFields++;
+        if (hasField) filledFields++;
+        if (hasGpa) filledFields++;
+        if (hasCountry) filledFields++;
+        filledFields++; // financialNeed
+        
+        boolean hasLanguage = profile.getLanguageProficiency() != null && !profile.getLanguageProficiency().isBlank();
+        if (hasLanguage) filledFields++;
+
+        if (filledFields == totalFields) {
+            nextStep = "/profile-summary";
+        }
+
+        int percentage = (int) Math.round(((double) filledFields / totalFields) * 100);
+
+        return ResponseEntity.ok(Map.of(
+            "completeness", percentage,
+            "next_step", nextStep
+        ));
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
