@@ -389,7 +389,7 @@ public class GeminiAIService {
 
             Use professional, concise language. Make it compelling for scholarship and job applications.
             """,
-            user.getUsername(),
+            user.getDisplayName(),
             user.getEmail(),
             orNA(profile.getEducationLevel()),
             orNA(profile.getInstitution()),
@@ -449,7 +449,7 @@ public class GeminiAIService {
             jobTitle,
             company,
             jobDescription,
-            user.getUsername(),
+            user.getDisplayName(),
             orNA(profile.getEducationLevel()),
             orNA(profile.getInstitution()),
             profile.getGpa() != null ? profile.getGpa().toString() : "N/A",
@@ -703,7 +703,7 @@ public class GeminiAIService {
 
             Write the statement directly (no headers, just the prose).
             """,
-            profile.getUser().getUsername(),
+            profile.getUser().getDisplayName(),
             orNA(profile.getEducationLevel()),
             orNA(profile.getInstitution()),
             orNA(profile.getFieldOfStudy()),

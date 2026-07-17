@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -68,13 +69,20 @@ public class AuthController {
      * Activates the account on success.
      */
     @PostMapping("/verify-otp")
-    public ResponseEntity<ApiResponse> verifyOtp(
+    public ResponseEntity<?> verifyOtp(
             @Valid @RequestBody VerifyOtpRequest request) {
 
-        ApiResponse response = authService.verifyOtp(request);
-        return response.isSuccess()
-            ? ResponseEntity.ok(response)
-            : ResponseEntity.badRequest().body(response);
+        try {
+            AuthResponse response = authService.verifyOtp(request);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException ex) {
+            return ResponseEntity
+                .badRequest()
+                .body(ApiResponse.builder()
+                    .success(false)
+                    .message(ex.getMessage())
+                    .build());
+        }
     }
 
     /**
@@ -173,5 +181,22 @@ public class AuthController {
         return response.isSuccess()
             ? ResponseEntity.ok(response)
             : ResponseEntity.badRequest().body(response);
+    }
+
+    /**
+     * GET /api/v1/auth/me
+     * Returns the currently authenticated user's details.
+     */
+    @GetMapping("/me")
+    public ResponseEntity<AuthResponse> getCurrentUser(
+            @AuthenticationPrincipal User user) {
+        
+        AuthResponse response = AuthResponse.builder()
+            .email(user.getEmail())
+            .username(user.getDisplayName())
+            .role(user.getRole().name())
+            .build();
+            
+        return ResponseEntity.ok(response);
     }
 }

@@ -223,7 +223,7 @@ public class DocumentVerificationService {
             String documentText, DocumentType documentType,
             User user, StudentProfile profile) {
 
-        String profileName = user.getUsername();
+        String profileName = user.getDisplayName();
         String profileGpa = profile != null && profile.getGpa() != null
             ? profile.getGpa().toString() : "Not provided";
         String profileInstitution = profile != null ? orNA(profile.getInstitution()) : "Not provided";

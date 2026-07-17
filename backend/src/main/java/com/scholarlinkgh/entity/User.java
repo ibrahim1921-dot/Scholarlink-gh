@@ -156,6 +156,12 @@ public class User implements UserDetails {
      */
     private LocalDateTime documentDisclaimerAcceptedAt;
 
+    // ── Display Name ──────────────────────────────────────────────────────────
+
+    public String getDisplayName() {
+        return this.username; // raw field access — NOT the overridden getUsername()
+    }
+
     // ── UserDetails contract ──────────────────────────────────────────────────
 
     @Override

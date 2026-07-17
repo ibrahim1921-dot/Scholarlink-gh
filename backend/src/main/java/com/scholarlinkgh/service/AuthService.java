@@ -119,7 +119,7 @@ public class AuthService {
      * FR-03: account is activated only after correct OTP is submitted.
      */
     @Transactional
-    public ApiResponse verifyOtp(VerifyOtpRequest request) {
+    public AuthResponse verifyOtp(VerifyOtpRequest request) {
 
         User user = userRepository.findByEmail(request.getEmail().toLowerCase().trim())
             .orElse(null);
@@ -127,17 +127,11 @@ public class AuthService {
         // OWASP A07: same message whether email not found or OTP wrong
         if (user == null || !otpService.verifyOtp(user, request.getOtpCode())) {
             log.warn("OTP verification failed for: {}", request.getEmail());
-            return ApiResponse.builder()
-                .success(false)
-                .message("Invalid or expired verification code.")
-                .build();
+            throw new RuntimeException("Invalid or expired verification code.");
         }
 
         if (user.isEnabled()) {
-            return ApiResponse.builder()
-                .success(false)
-                .message("Account is already verified.")
-                .build();
+            throw new RuntimeException("Account is already verified.");
         }
 
         user.setEnabled(true);
@@ -145,10 +139,7 @@ public class AuthService {
 
         log.info("Account verified via OTP: {}", user.getEmail());
 
-        return ApiResponse.builder()
-            .success(true)
-            .message("Email verified successfully. You can now log in.")
-            .build();
+        return generateAuthResponse(user);
     }
 
     // ── Login ─────────────────────────────────────────────────────────────────
@@ -201,26 +192,9 @@ public class AuthService {
             userRepository.save(user);
         }
 
-        String rawRefreshToken = jwtService.generateRefreshToken(user);
-        String accessToken = jwtService.generateAccessToken(user);
-
-        // Persist refresh token hash for server-side revocation
-        LocalDateTime refreshExpiry = LocalDateTime.now()
-            .plusSeconds(jwtService.getRefreshTokenExpirySeconds());
-        refreshTokenService.issue(user, rawRefreshToken, refreshExpiry);
-
-        // Update last activity timestamp
-        userActivityService.touch(user);
-
         log.info("Successful login: {}", user.getEmail());
 
-        return AuthResponse.builder()
-            .accessToken(accessToken)
-            .refreshToken(rawRefreshToken)
-            .email(user.getEmail())
-            .username(user.getUsername())
-            .role(user.getRole().name())
-            .build();
+        return generateAuthResponse(user);
     }
 
     // ── Token Refresh ─────────────────────────────────────────────────────────
@@ -283,7 +257,7 @@ public class AuthService {
             .accessToken(newAccessToken)
             .refreshToken(request.getRefreshToken())
             .email(user.getEmail())
-            .username(user.getUsername())
+            .username(user.getDisplayName())
             .role(user.getRole().name())
             .build();
     }
@@ -404,6 +378,27 @@ public class AuthService {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private AuthResponse generateAuthResponse(User user) {
+        String rawRefreshToken = jwtService.generateRefreshToken(user);
+        String accessToken = jwtService.generateAccessToken(user);
+
+        // Persist refresh token hash for server-side revocation
+        LocalDateTime refreshExpiry = LocalDateTime.now()
+            .plusSeconds(jwtService.getRefreshTokenExpirySeconds());
+        refreshTokenService.issue(user, rawRefreshToken, refreshExpiry);
+
+        // Update last activity timestamp
+        userActivityService.touch(user);
+
+        return AuthResponse.builder()
+            .accessToken(accessToken)
+            .refreshToken(rawRefreshToken)
+            .email(user.getEmail())
+            .username(user.getDisplayName())
+            .role(user.getRole().name())
+            .build();
+    }
 
     private void handleFailedLogin(String email) {
         userRepository.findByEmail(email).ifPresent(user -> {
