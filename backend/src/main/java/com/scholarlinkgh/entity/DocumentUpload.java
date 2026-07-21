@@ -64,11 +64,17 @@ public class DocumentUpload {
     private String filename;
 
     /**
-     * Server-side storage path (local filesystem or S3 key).
+     * Server-side storage path (local filesystem or S3 key, now Cloudinary URL).
      * OWASP A01: never exposed to the student directly.
      */
     @Column(nullable = false, length = 1000)
     private String storagePath;
+
+    /**
+     * Cloudinary Public ID used for deletion.
+     */
+    @Column(length = 255)
+    private String cloudinaryPublicId;
 
     /**
      * Type of document.

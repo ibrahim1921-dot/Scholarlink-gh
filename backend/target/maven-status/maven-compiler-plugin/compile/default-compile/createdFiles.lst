@@ -15,6 +15,7 @@ com\scholarlinkgh\controller\ScholarshipController.class
 com\scholarlinkgh\entity\RefreshToken$RefreshTokenBuilder.class
 com\scholarlinkgh\repository\UserRepository.class
 com\scholarlinkgh\dto\ScholarshipRequest.class
+com\scholarlinkgh\entity\ScholarshipStatus.class
 com\scholarlinkgh\entity\StudentProfile$StudentProfileBuilder.class
 com\scholarlinkgh\entity\DocumentType.class
 com\scholarlinkgh\entity\DocumentUpload$DocumentUploadBuilder.class
@@ -51,6 +52,7 @@ com\scholarlinkgh\security\JwtAuthFilter.class
 com\scholarlinkgh\dto\ForgotPasswordRequest.class
 com\scholarlinkgh\config\CacheConfig.class
 com\scholarlinkgh\controller\ProfileController.class
+com\scholarlinkgh\entity\ApplicationMode.class
 com\scholarlinkgh\entity\JobListing.class
 com\scholarlinkgh\entity\DocumentUpload.class
 com\scholarlinkgh\entity\Scholarship$ScholarshipBuilder.class
@@ -76,11 +78,13 @@ com\scholarlinkgh\entity\ApplicationTracker$ApplicationTrackerBuilder.class
 com\scholarlinkgh\dto\ScholarshipMatchResponse.class
 com\scholarlinkgh\service\ApplicationTrackerService.class
 com\scholarlinkgh\repository\ScholarshipReportRepository.class
+com\scholarlinkgh\config\CloudinaryConfig.class
 com\scholarlinkgh\config\DataInitializer.class
 com\scholarlinkgh\config\SecurityConfig.class
 com\scholarlinkgh\service\MailService.class
 com\scholarlinkgh\entity\ScholarshipMatch$ScholarshipMatchBuilder.class
 com\scholarlinkgh\config\NotificationScheduler.class
+com\scholarlinkgh\service\DocumentVerificationService$1.class
 com\scholarlinkgh\dto\EssayReviewRequest.class
 com\scholarlinkgh\entity\JobApplication$JobApplicationBuilder.class
 com\scholarlinkgh\repository\SavedScholarshipRepository.class

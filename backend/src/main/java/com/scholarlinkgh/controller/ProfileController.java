@@ -91,8 +91,14 @@ public class ProfileController {
         if (body.containsKey("language_proficiency")) {
             profile.setLanguageProficiency((String) body.get("language_proficiency"));
         }
-        if (body.containsKey("financial_need") && body.get("financial_need") != null) {
-            profile.setFinancialNeed(Boolean.parseBoolean(body.get("financial_need").toString()));
+        if (body.containsKey("standardized_tests")) {
+            profile.setStandardizedTests((String) body.get("standardized_tests"));
+        }
+        if (body.containsKey("intended_start_date")) {
+            profile.setIntendedStartDate((String) body.get("intended_start_date"));
+        }
+        if (body.containsKey("financial_need")) {
+            profile.setFinancialNeed((String) body.get("financial_need"));
         }
         if (body.containsKey("bio")) {
             profile.setBio((String) body.get("bio"));
@@ -147,8 +153,7 @@ public class ProfileController {
     /**
      * GET /api/v1/profile/completeness
      *
-     * Calculates the profile completeness score (0-100) based on 6 core fields:
-     * institution, fieldOfStudy, gpa, countryPreference, financialNeed, languageProficiency.
+     * Calculates the profile completeness score (0-100) based on 10 core fields.
      */
     @GetMapping("/completeness")
     public ResponseEntity<Map<String, Object>> getProfileCompleteness() {
@@ -163,32 +168,40 @@ public class ProfileController {
         }
 
         int filledFields = 0;
-        int totalFields = 6;
+        int totalFields = 10;
         String nextStep = "/profile-setup";
 
+        boolean hasEducationLevel = profile.getEducationLevel() != null && !profile.getEducationLevel().isBlank();
         boolean hasInstitution = profile.getInstitution() != null && !profile.getInstitution().isBlank();
         boolean hasField = profile.getFieldOfStudy() != null && !profile.getFieldOfStudy().isBlank();
         boolean hasGpa = profile.getGpa() != null;
+        boolean hasGradYear = profile.getGraduationYear() != null;
         
-        if (hasInstitution && hasField && hasGpa) {
+        if (hasEducationLevel && hasInstitution && hasField && hasGpa && hasGradYear) {
             nextStep = "/profile-setup-step-2";
         }
 
         boolean hasCountry = profile.getCountryPreference() != null && !profile.getCountryPreference().isBlank();
-        // Assume financialNeed is filled
+        boolean hasLanguage = profile.getLanguageProficiency() != null && !profile.getLanguageProficiency().isBlank();
+        boolean hasFinancialNeed = profile.getFinancialNeed() != null && !profile.getFinancialNeed().isBlank();
         
-        if (hasInstitution && hasField && hasGpa && hasCountry) {
+        if (hasEducationLevel && hasInstitution && hasField && hasGpa && hasGradYear && hasCountry && hasLanguage) {
             nextStep = "/profile-setup-step-3";
         }
 
+        boolean hasBio = profile.getBio() != null && !profile.getBio().isBlank();
+        boolean hasAchievements = profile.getAchievements() != null && !profile.getAchievements().isBlank();
+
+        if (hasEducationLevel) filledFields++;
         if (hasInstitution) filledFields++;
         if (hasField) filledFields++;
         if (hasGpa) filledFields++;
+        if (hasGradYear) filledFields++;
         if (hasCountry) filledFields++;
-        filledFields++; // financialNeed
-        
-        boolean hasLanguage = profile.getLanguageProficiency() != null && !profile.getLanguageProficiency().isBlank();
+        if (hasFinancialNeed) filledFields++;
         if (hasLanguage) filledFields++;
+        if (hasBio) filledFields++;
+        if (hasAchievements) filledFields++;
 
         if (filledFields == totalFields) {
             nextStep = "/profile-summary";

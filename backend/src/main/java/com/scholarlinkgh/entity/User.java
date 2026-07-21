@@ -113,13 +113,6 @@ public class User implements UserDetails {
     private LocalDateTime otpExpiresAt;
 
     /**
-     * Education level — determines which scholarships are shown.
-     * FR-08: SHS_GRADUATE or UNIVERSITY_GRADUATE.
-     */
-    @Column(length = 30)
-    private String educationLevel;
-
-    /**
      * Password reset token (SHA-256 hex). Null when no reset is pending.
      */
     @Column(length = 64)

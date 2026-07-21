@@ -145,7 +145,7 @@ public class NotificationService {
         // Count scholarships expiring within 30 days
         LocalDate cutoff = LocalDate.now().plusDays(30);
         long upcomingDeadlines = scholarshipRepository
-            .findAllFiltered(null, null, null, cutoff,
+            .findAllFiltered(null, null, null, cutoff, null, null,
                 org.springframework.data.domain.PageRequest.of(0, 100))
             .getTotalElements();
 

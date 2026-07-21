@@ -1,6 +1,7 @@
 package com.scholarlinkgh.dto;
 
 import com.scholarlinkgh.entity.ScholarshipCategory;
+import com.scholarlinkgh.entity.ScholarshipStatus;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Future;
@@ -67,4 +68,17 @@ public class ScholarshipRequest {
 
     @Size(max = 2000, message = "Additional notes must not exceed 2000 characters")
     private String additionalNotes;
+
+    @Size(max = 1000, message = "Image URL must not exceed 1000 characters")
+    @Pattern(
+        regexp = "^(https?://[a-zA-Z0-9\\-._~:/?#\\[\\]@!$&'()*+,;=%]+)?$",
+        message = "Image URL must be a valid HTTP(S) URL"
+    )
+    private String imageUrl;
+
+    private ScholarshipStatus status;
+
+    private boolean allowsAssistedApplication;
+
+    private Double assistedApplicationFee;
 }

@@ -152,7 +152,7 @@ public class GeminiAIService {
 
         // Load active scholarships (capped to avoid prompt size issues)
         List<Scholarship> scholarships = scholarshipRepository
-            .findAllFiltered(null, null, null, null,
+            .findAllFiltered(null, null, null, null, null, null,
                 PageRequest.of(0, maxScholarshipsInPrompt))
             .getContent();
 
@@ -377,6 +377,7 @@ public class GeminiAIService {
             Graduation Year: %s
             Country Preference: %s
             Languages: %s
+            Standardized Tests: %s
             Bio: %s
             Achievements: %s
 
@@ -398,6 +399,7 @@ public class GeminiAIService {
             profile.getGraduationYear() != null ? profile.getGraduationYear().toString() : "N/A",
             orNA(profile.getCountryPreference()),
             orNA(profile.getLanguageProficiency()),
+            orNA(profile.getStandardizedTests()),
             orNA(profile.getBio()),
             orNA(profile.getAchievements())
         );
@@ -561,7 +563,8 @@ public class GeminiAIService {
         sb.append("Graduation Year: ").append(profile.getGraduationYear() != null ? profile.getGraduationYear() : "N/A").append("\n");
         sb.append("Country Preference: ").append(orNA(profile.getCountryPreference())).append("\n");
         sb.append("Languages: ").append(orNA(profile.getLanguageProficiency())).append("\n");
-        sb.append("Financial Need: ").append(profile.isFinancialNeed() ? "Yes" : "No").append("\n");
+        sb.append("Standardized Tests: ").append(orNA(profile.getStandardizedTests())).append("\n");
+        sb.append("Financial Need: ").append(profile.getFinancialNeed() != null ? profile.getFinancialNeed() : "Not specified").append("\n");
         sb.append("Bio: ").append(orNA(profile.getBio())).append("\n");
         sb.append("Achievements: ").append(orNA(profile.getAchievements())).append("\n\n");
 
@@ -619,6 +622,7 @@ public class GeminiAIService {
             Country Preference: %s
             Financial Need: %s
             Languages: %s
+            Standardized Tests: %s
 
             SCHOLARSHIP REQUIREMENTS:
             Name: %s
@@ -641,8 +645,9 @@ public class GeminiAIService {
             profile.getGpa() != null ? profile.getGpa() : "Not provided",
             orNA(profile.getFieldOfStudy()),
             orNA(profile.getCountryPreference()),
-            profile.isFinancialNeed() ? "Yes" : "No",
+            profile.getFinancialNeed() != null ? profile.getFinancialNeed() : "Not specified",
             orNA(profile.getLanguageProficiency()),
+            orNA(profile.getStandardizedTests()),
             scholarship.getName(),
             scholarship.getCategory(),
             orNA(scholarship.getDestinationCountry()),
@@ -681,6 +686,7 @@ public class GeminiAIService {
             Institution: %s
             Field of Study: %s
             GPA: %s
+            Standardized Tests: %s
             Bio: %s
             Achievements: %s
 
@@ -708,6 +714,7 @@ public class GeminiAIService {
             orNA(profile.getInstitution()),
             orNA(profile.getFieldOfStudy()),
             profile.getGpa() != null ? profile.getGpa() : "N/A",
+            orNA(profile.getStandardizedTests()),
             orNA(profile.getBio()),
             orNA(profile.getAchievements()),
             scholarshipName,
@@ -761,6 +768,7 @@ public class GeminiAIService {
             STUDENT PROFILE:
             Education: %s at %s, GPA: %s
             Field: %s
+            Standardized Tests: %s
             Skills/Bio: %s
             Achievements: %s
 
@@ -773,6 +781,7 @@ public class GeminiAIService {
             orNA(profile.getInstitution()),
             profile.getGpa() != null ? profile.getGpa() : "N/A",
             orNA(profile.getFieldOfStudy()),
+            orNA(profile.getStandardizedTests()),
             orNA(profile.getBio()),
             orNA(profile.getAchievements()),
             jobs.toString()

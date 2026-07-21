@@ -2,6 +2,7 @@ package com.scholarlinkgh.repository;
 
 import com.scholarlinkgh.entity.Scholarship;
 import com.scholarlinkgh.entity.ScholarshipCategory;
+import com.scholarlinkgh.entity.ScholarshipStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Scholarship data access layer.
@@ -27,8 +29,9 @@ public interface ScholarshipRepository extends JpaRepository<Scholarship, Long> 
      * IMPORTANT — caller contract to avoid PostgreSQL type-inference errors:
      * <ul>
      *   <li>{@code country} must be pre-lowercased or null.</li>
-     *   <li>{@code field} must be pre-lowercased with the trailing {@code %}
-     *       wildcard already appended (e.g. {@code "engineering%"}), or null.</li>
+     *       wildcards on both sides (e.g. {@code "%engineering%"}), or null.</li>
+     *   <li>{@code search} must be pre-lowercased with {@code %} wildcards
+     *       on both sides (e.g. {@code "%chevening%"}), or null.</li>
      * </ul>
      *
      * LOWER() is applied only to entity columns, never to bind parameters.
@@ -36,8 +39,8 @@ public interface ScholarshipRepository extends JpaRepository<Scholarship, Long> 
      * is null, PostgreSQL infers its type as {@code bytea}, and neither
      * {@code lower(bytea)} nor the {@code text ~~ bytea} LIKE operator exist.
      *
-     * Field search uses a trailing-wildcard LIKE so a B-tree index on
-     * eligibleFields can still be used for prefix matches.
+     * Field search uses a double-wildcard LIKE to ensure matching across
+     * comma-separated eligibleFields values.
      */
     @Query("""
         SELECT s FROM Scholarship s
@@ -47,6 +50,12 @@ public interface ScholarshipRepository extends JpaRepository<Scholarship, Long> 
         AND (:country IS NULL OR LOWER(s.destinationCountry) = :country)
         AND (:field IS NULL OR LOWER(s.eligibleFields) LIKE :field)
         AND (:beforeDate IS NULL OR s.deadline <= :beforeDate)
+        AND (:search IS NULL OR (
+            LOWER(s.name) LIKE :search
+            OR LOWER(s.provider) LIKE :search
+            OR LOWER(s.eligibleFields) LIKE :search
+        ))
+        AND (:#{#status} IS NULL OR s.status = :status)
         ORDER BY s.deadline ASC
     """)
     Page<Scholarship> findAllFiltered(
@@ -54,6 +63,8 @@ public interface ScholarshipRepository extends JpaRepository<Scholarship, Long> 
         @Param("country") String country,
         @Param("field") String field,
         @Param("beforeDate") LocalDate beforeDate,
+        @Param("search") String search,
+        @Param("status") ScholarshipStatus status,
         Pageable pageable
     );
 
@@ -79,4 +90,28 @@ public interface ScholarshipRepository extends JpaRepository<Scholarship, Long> 
         @Param("cutoffDate") LocalDate cutoffDate,
         Pageable pageable
     );
+
+    /**
+     * Returns distinct destination countries across all verified, active scholarships.
+     * Used by the Country filter dropdown on the scholarships list screen.
+     */
+    @Query("""
+        SELECT DISTINCT s.destinationCountry FROM Scholarship s
+        WHERE s.verified = true AND s.active = true
+        AND s.destinationCountry IS NOT NULL
+        ORDER BY s.destinationCountry
+    """)
+    List<String> findDistinctCountries();
+
+    /**
+     * Returns distinct raw eligibleFields strings across all verified, active scholarships.
+     * These are comma-separated and need normalization in the service layer.
+     * Used by the Field filter dropdown on the scholarships list screen.
+     */
+    @Query("""
+        SELECT DISTINCT s.eligibleFields FROM Scholarship s
+        WHERE s.verified = true AND s.active = true
+        AND s.eligibleFields IS NOT NULL
+    """)
+    List<String> findDistinctEligibleFields();
 }

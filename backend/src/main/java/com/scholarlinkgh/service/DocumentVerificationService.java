@@ -26,7 +26,13 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.scheduling.annotation.Async;
 
 /**
  * DocumentVerificationService — handles document upload, storage,
@@ -79,6 +85,8 @@ public class DocumentVerificationService {
     private final StudentProfileRepository studentProfileRepository;
     private final GeminiAIService geminiAIService;
     private final AuditService auditService;
+    private final Cloudinary cloudinary;
+    private final ObjectProvider<DocumentVerificationService> selfProvider;
     private final Tika tika = new Tika();
 
     // ── FR-41: Disclaimer Check ───────────────────────────────────────────────
@@ -132,14 +140,21 @@ public class DocumentVerificationService {
                 "Only PDF, JPEG, PNG, and TIFF files are accepted. Detected type: " + mimeType);
         }
 
-        // Save file to storage
-        String storagePath = saveFileToStorage(file, fileBytes, user.getId());
+        // Upload to Cloudinary
+        Map<String, Object> params = ObjectUtils.asMap(
+            "resource_type", "application/pdf".equals(mimeType) ? "raw" : "image",
+            "folder", "scholarlink/documents/user_" + user.getId()
+        );
+        Map<?, ?> uploadResult = cloudinary.uploader().upload(fileBytes, params);
+        String secureUrl = (String) uploadResult.get("secure_url");
+        String publicId = (String) uploadResult.get("public_id");
 
         // Build the DocumentUpload entity with PENDING status
         DocumentUpload upload = DocumentUpload.builder()
             .student(user)
             .filename(sanitiseFilename(file.getOriginalFilename()))
-            .storagePath(storagePath)
+            .storagePath(secureUrl)
+            .cloudinaryPublicId(publicId)
             .documentType(documentType)
             .verificationStatus(VerificationStatus.PENDING)
             .fileSizeBytes(file.getSize())
@@ -148,8 +163,8 @@ public class DocumentVerificationService {
 
         upload = documentUploadRepository.save(upload);
 
-        // Run AI verification asynchronously-styled (synchronous for MVP)
-        performAiVerification(upload, fileBytes, user);
+        // Run AI verification asynchronously through proxy
+        selfProvider.getObject().performAiVerification(upload, fileBytes, user);
 
         auditService.log(user.getId(), user.getEmail(),
             "UPLOAD_DOCUMENT", "DocumentUpload", upload.getId(), documentType.name());
@@ -169,8 +184,10 @@ public class DocumentVerificationService {
      * FR-38: checks for official letterhead/keywords, profile name/GPA match,
      *        and absence of visible alterations.
      */
+    @Async
     @Transactional
     public void performAiVerification(DocumentUpload upload, byte[] fileBytes, User user) {
+        log.info("Starting AI Verification asynchronously. Thread: {}", Thread.currentThread().getName());
         String extractedText = extractText(fileBytes, upload.getMimeType());
         if (extractedText == null || extractedText.isBlank()) {
             upload.setVerificationStatus(VerificationStatus.SUSPICIOUS);
@@ -195,6 +212,31 @@ public class DocumentVerificationService {
             log.warn("Document {} flagged as SUSPICIOUS for user {} — queued for admin review",
                      upload.getId(), user.getEmail());
         }
+    }
+
+    /**
+     * Deletes a document from Cloudinary and the database.
+     */
+    @Transactional
+    public void deleteDocument(Long id, User user) {
+        DocumentUpload doc = documentUploadRepository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Document not found"));
+
+        if (!doc.getStudent().getId().equals(user.getId())) {
+            throw new IllegalStateException("You do not have permission to delete this document.");
+        }
+
+        if (doc.getCloudinaryPublicId() != null) {
+            try {
+                cloudinary.uploader().destroy(doc.getCloudinaryPublicId(), ObjectUtils.emptyMap());
+            } catch (Exception e) {
+                log.warn("Failed to delete Cloudinary asset {}: {}", doc.getCloudinaryPublicId(), e.getMessage());
+                // Proceed to delete from DB anyway, or we could throw. Proceeding is safer for user experience.
+            }
+        }
+        
+        documentUploadRepository.delete(doc);
+        log.info("Document {} deleted by user {}", id, user.getEmail());
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
@@ -223,45 +265,135 @@ public class DocumentVerificationService {
             String documentText, DocumentType documentType,
             User user, StudentProfile profile) {
 
+        StringBuilder prompt = new StringBuilder();
+        prompt.append(buildSystemRoleAndContext(documentType, user, profile));
+        prompt.append(buildVerificationFramework());
+        prompt.append(buildTypeSpecificRules(documentType));
+        prompt.append(buildDecisionFramework());
+        prompt.append(buildJsonResponseInstructions());
+        prompt.append(buildExtractedTextSection(documentText));
+
+        return prompt.toString();
+    }
+
+    private String buildSystemRoleAndContext(DocumentType documentType, User user, StudentProfile profile) {
         String profileName = user.getDisplayName();
-        String profileGpa = profile != null && profile.getGpa() != null
-            ? profile.getGpa().toString() : "Not provided";
+        String profileGpa = profile != null && profile.getGpa() != null ? profile.getGpa().toString() : "Not provided";
         String profileInstitution = profile != null ? orNA(profile.getInstitution()) : "Not provided";
+        String profileEducation = profile != null ? orNA(profile.getEducationLevel()) : "Not provided";
+        String profileField = profile != null ? orNA(profile.getFieldOfStudy()) : "Not provided";
+        String profileGradYear = profile != null && profile.getGraduationYear() != null ? profile.getGraduationYear().toString() : "Not provided";
 
         return String.format("""
-            You are a document verification system for scholarship applications.
-
-            Verify the following %s document.
-
+            You are an expert document verification AI for a scholarship platform.
+            
+            Your task is to verify the following uploaded document which the user claims is a: %s
+            
             STUDENT PROFILE:
-            Name: %s
-            GPA: %s
-            Institution: %s
+            - Name: %s
+            - GPA: %s
+            - Institution: %s
+            - Education Level: %s
+            - Field of Study: %s
+            - Graduation Year: %s
+            
+            """,
+            documentType.name(), profileName, profileGpa, profileInstitution, profileEducation, profileField, profileGradYear);
+    }
 
-            DOCUMENT TEXT (extracted):
-            \"\"\"%s\"\"\"
+    private String buildVerificationFramework() {
+        return """
+            VERIFICATION FRAMEWORK:
+            Evaluate the document using the following steps:
+            1. Document Type: Determine what kind of document the extracted text actually represents.
+            2. Evidence: Compare the detected document against the specific criteria for the claimed document type.
+            3. Common Rules: Ensure the document is readable, meaningful, not blank, generally authentic, and internally consistent.
+            4. Anti-Hallucination: Base conclusions ONLY on extracted text. Do NOT invent missing information or assume fraud solely because a piece of information is missing.
+            5. Severity: Differentiate between minor issues (formatting differences, poor OCR, missing optional fields) and major issues (different name, completely unrelated document, obvious manipulation, impossible GPA).
+            
+            """;
+    }
 
-            Check for:
-            1. Official letterhead or authoritative keywords for a %s document
-            2. Student name appears in document (should match: %s)
-            3. For transcripts: GPA should match approximately %s
-            4. Signs of alteration (unusual formatting, mixed fonts, inconsistencies)
-            5. Document appears to be a legitimate official document
+    private String buildTypeSpecificRules(DocumentType documentType) {
+        String base = "TYPE-SPECIFIC CRITERIA for " + documentType.name() + ":\n";
+        switch (documentType) {
+            case TRANSCRIPT:
+                return base + """
+                    EVALUATE: Institution name, academic programme, student name, list of courses, grades, GPA, and general transcript structure. Look for academic authenticity indicators.
+                    DO NOT REQUIRE: Signatures (unofficial transcripts are acceptable).
+                    """;
+            case CV:
+                return base + """
+                    EVALUATE: Professional resume structure, applicant name, education history, work experience, projects, skills, and logical formatting.
+                    DO NOT EXPECT: GPA, official letterhead, or institutional formatting.
+                    """;
+            case STATEMENT:
+                return base + """
+                    EVALUATE: Coherent narrative, applicant motivation, writing quality, paragraph structure, logical flow, and applicant identity where referenced.
+                    DO NOT EXPECT: GPA, official letterhead, or academic transcript formatting.
+                    """;
+            case REFERENCE:
+                return base + """
+                    EVALUATE: Recommendation language, referee information, professional tone, sign-off/signature (if text allows), and relationship between referee and applicant.
+                    DO NOT EXPECT: Applicant's GPA or exhaustive academic records.
+                    """;
+            case IDENTITY:
+                return base + """
+                    EVALUATE: Identity-document structure (e.g., passport, national ID), name, identification number, dates (issue/expiry), and authenticity indicators.
+                    DO NOT EXPECT: Institutional formatting, academic history, or GPA.
+                    """;
+            case FINANCIAL_PROOF:
+                return base + """
+                    EVALUATE: Sponsor or income information, financial figures, supporting explanation, and financial consistency (e.g., bank statements, tax returns).
+                    DO NOT EXPECT: GPA or academic history.
+                    """;
+            case OTHER:
+            default:
+                return base + """
+                    EVALUATE: Perform lightweight validation. Ensure the document is readable, genuine, relevant, and not obviously manipulated.
+                    DO NOT EXPECT: Any fixed or specific structure.
+                    """;
+        }
+    }
 
-            Respond with ONLY a JSON object (no markdown):
+    private String buildDecisionFramework() {
+        return """
+            DECISION MATRIX (Select one status based on the framework above):
+            
+            VERIFIED: The document generally matches the selected type. No significant authenticity concerns or fraud evidence. Any inconsistencies are minor and explainable.
+            SUSPICIOUS: Represents uncertainty. The detected type differs from the selected type (e.g. CV instead of STATEMENT), important information is missing, or OCR quality is too poor for confident verification.
+            REJECTED: High confidence of invalidity. The document is completely unrelated, blank, severely manipulated, contains fabricated/impossible content, or has a clear identity mismatch.
+            
+            """;
+    }
+
+    private String buildJsonResponseInstructions() {
+        return """
+            JSON RESPONSE FORMAT:
+            You MUST respond with ONLY a valid JSON object. No markdown, no prose, and no explanations before or after the JSON.
+            
+            BOOLEAN FIELD DEFINITIONS:
+            - name_match: true if the applicant's name reasonably matches the supplied profile. false otherwise.
+            - has_official_markers: true when official markers are expected for the selected document type AND are present. false when expected but absent, OR when not applicable (e.g., CVs, Personal Statements).
+            - signs_of_alteration: true ONLY when there is evidence suggesting manipulation, tampering, or fabrication. false otherwise (do not infer alteration solely because information is missing).
+            
             {
               "verification_status": "VERIFIED" | "SUSPICIOUS" | "REJECTED",
-              "verification_notes": "<brief explanation of the decision>",
+              "verification_notes": "<Concise, evidence-based explanation of the primary reasons for your decision. Max 2-3 sentences.>",
               "name_match": <true|false>,
               "has_official_markers": <true|false>,
               "signs_of_alteration": <true|false>
             }
+            
+            """;
+    }
+
+    private String buildExtractedTextSection(String documentText) {
+        return String.format("""
+            DOCUMENT TEXT (extracted):
+            \"\"\"%s\"\"\"
             """,
-            documentType.name(),
-            profileName, profileGpa, profileInstitution,
-            documentText.substring(0, Math.min(documentText.length(), 3000)),
-            documentType.name(),
-            profileName, profileGpa
+            documentText.substring(0, Math.min(documentText.length(), 4000))
         );
     }
 
@@ -303,22 +435,6 @@ public class DocumentVerificationService {
         else if (s.startsWith("```")) s = s.substring(3);
         if (s.endsWith("```")) s = s.substring(0, s.length() - 3);
         return s.trim();
-    }
-
-    /**
-     * Saves the uploaded file to local storage (or an S3 bucket in production).
-     * Returns the storage path for the database record.
-     */
-    private String saveFileToStorage(MultipartFile file, byte[] fileBytes, Long userId) throws IOException {
-        Path uploadDir = Paths.get(uploadDirectory, "user_" + userId);
-        Files.createDirectories(uploadDir);
-
-        String extension = getExtension(file.getOriginalFilename());
-        String uniqueFilename = UUID.randomUUID() + extension;
-        Path destination = uploadDir.resolve(uniqueFilename);
-
-        Files.write(destination, fileBytes);
-        return destination.toString();
     }
 
     private String getExtension(String filename) {

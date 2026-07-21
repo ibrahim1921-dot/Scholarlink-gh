@@ -100,3 +100,8 @@ spring.servlet.multipart.max-request-size=15MB
 # ── Logging ────────────────────────────────────────────────────────────
 logging.level.com.scholarlinkgh=INFO
 logging.level.org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer=ERROR
+
+# Cloudinary
+cloudinary.cloud-name=${CLOUDINARY_CLOUD_NAME}
+cloudinary.api-key=${CLOUDINARY_API_KEY}
+cloudinary.api-secret=${CLOUDINARY_API_SECRET}

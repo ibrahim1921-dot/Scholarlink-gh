@@ -90,7 +90,7 @@ public class AuthService {
             .email(request.getEmail().toLowerCase().trim())
             .phoneNumber(request.getPhoneNumber())
             .password(passwordEncoder.encode(request.getPassword()))
-            .educationLevel(request.getEducationLevel())
+
             .role(Role.STUDENT)
             // FR-03: disabled until email verified via OTP
             .enabled(false)

@@ -127,6 +127,27 @@ public class Scholarship {
     private String additionalNotes;
 
     /**
+     * URL to the scholarship's thumbnail/cover image.
+     * Nullable — cards fall back to a static placeholder when null.
+     */
+    @Column(length = 1000)
+    private String imageUrl;
+
+    /**
+     * Availability status: OPEN, CLOSING_SOON, CLOSED, FULL.
+     * Nullable — when null, the frontend derives status from daysUntilDeadline.
+     * FULL can only be set explicitly by an admin (never derived).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private ScholarshipStatus status;
+
+    @Column(nullable = false)
+    private boolean allowsAssistedApplication = true;
+
+    private Double assistedApplicationFee;
+
+    /**
      * Whether admin has verified this listing is legitimate.
      * OWASP A04: only verified listings are shown to students.
      * Defaults to false — admin must approve before it goes live.

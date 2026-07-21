@@ -6,6 +6,7 @@ import com.scholarlinkgh.dto.ScholarshipResponse;
 import com.scholarlinkgh.entity.Scholarship;
 import com.scholarlinkgh.entity.ScholarshipCategory;
 import com.scholarlinkgh.entity.ScholarshipReport;
+import com.scholarlinkgh.entity.ScholarshipStatus;
 import com.scholarlinkgh.entity.User;
 import com.scholarlinkgh.repository.ScholarshipRepository;
 import com.scholarlinkgh.repository.ScholarshipReportRepository;
@@ -25,6 +26,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Scholarship Service — all scholarship business logic.
@@ -52,18 +56,20 @@ public class ScholarshipService {
 
     /**
      * Returns paginated verified active scholarships with optional filters.
-     * FR-08: filter by category, country, field, deadline.
+     * FR-08: filter by category, country, field, deadline, search, status.
      * FR-04: ordered by deadline ascending (soonest first).
      */
     @Transactional(readOnly = true)
-    @Cacheable(value = "scholarshipList", key = "#page + ':' + #size + ':' + #category + ':' + #country + ':' + #field + ':' + #deadline")
+    @Cacheable(value = "scholarshipList", key = "#page + ':' + #size + ':' + #category + ':' + #country + ':' + #field + ':' + #deadline + ':' + #search + ':' + #status")
     public Page<ScholarshipResponse> getScholarships(
             int page,
             int size,
             String category,
             String country,
             String field,
-            String deadline
+            String deadline,
+            String search,
+            String status
     ) {
         size = Math.min(size, 50);
         Pageable pageable = PageRequest.of(page, size, Sort.by("deadline").ascending());
@@ -86,6 +92,15 @@ public class ScholarshipService {
             };
         }
 
+        ScholarshipStatus statusEnum = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                statusEnum = ScholarshipStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                log.warn("Invalid scholarship status filter ignored: {}", status);
+            }
+        }
+
         // Pre-lowercase here so the JPQL query can apply LOWER() only to the
         // column side. The '%' wildcard is also appended here so the query
         // needs no CONCAT() — passing CONCAT(:field, '%') with a null :field
@@ -93,8 +108,10 @@ public class ScholarshipService {
         Page<Scholarship> scholarships = scholarshipRepository.findAllFiltered(
             categoryEnum,
             (country != null && !country.isBlank()) ? country.toLowerCase() : null,
-            (field   != null && !field.isBlank())   ? field.toLowerCase() + "%" : null,
+            (field   != null && !field.isBlank())   ? "%" + field.toLowerCase() + "%" : null,
             deadlineCutoff,
+            (search  != null && !search.isBlank())  ? "%" + search.toLowerCase() + "%" : null,
+            statusEnum,
             pageable
         );
 
@@ -230,6 +247,10 @@ public class ScholarshipService {
             .requirements(request.getRequirements())
             .selectionCriteria(request.getSelectionCriteria())
             .additionalNotes(request.getAdditionalNotes())
+            .imageUrl(request.getImageUrl())
+            .status(request.getStatus())
+            .allowsAssistedApplication(request.isAllowsAssistedApplication())
+            .assistedApplicationFee(request.getAssistedApplicationFee())
             .verified(false)
             .active(false)
             .reportCount(0)
@@ -267,6 +288,10 @@ public class ScholarshipService {
         scholarship.setRequirements(request.getRequirements());
         scholarship.setSelectionCriteria(request.getSelectionCriteria());
         scholarship.setAdditionalNotes(request.getAdditionalNotes());
+        scholarship.setImageUrl(request.getImageUrl());
+        scholarship.setStatus(request.getStatus());
+        scholarship.setAllowsAssistedApplication(request.isAllowsAssistedApplication());
+        scholarship.setAssistedApplicationFee(request.getAssistedApplicationFee());
 
         Scholarship updated = scholarshipRepository.save(scholarship);
 
@@ -337,6 +362,41 @@ public class ScholarshipService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return scholarshipRepository.findAllByVerifiedFalse(pageable)
             .map(ScholarshipResponse::from);
+    }
+
+    // ── Filter Lookups ────────────────────────────────────────────────────────
+
+    /**
+     * Returns distinct destination countries for the Country filter dropdown.
+     * Only includes countries from verified, active scholarships.
+     */
+    @Transactional(readOnly = true)
+    @Cacheable(value = "scholarshipCountries")
+    public List<String> getDistinctCountries() {
+        return scholarshipRepository.findDistinctCountries();
+    }
+
+    /**
+     * Returns normalized, deduplicated field-of-study values for the Field filter dropdown.
+     * Raw eligibleFields are comma-separated strings — this method splits, trims,
+     * deduplicates (case-insensitive), and sorts alphabetically.
+     */
+    @Transactional(readOnly = true)
+    @Cacheable(value = "scholarshipFields")
+    public List<String> getDistinctFields() {
+        List<String> rawFields = scholarshipRepository.findDistinctEligibleFields();
+        return rawFields.stream()
+            .flatMap(raw -> Arrays.stream(raw.split(",")))
+            .map(String::trim)
+            .filter(f -> !f.isBlank())
+            .map(f -> {
+                // Title-case: first letter uppercase, rest lowercase
+                String lower = f.toLowerCase();
+                return Character.toUpperCase(lower.charAt(0)) + lower.substring(1);
+            })
+            .distinct()
+            .sorted()
+            .collect(Collectors.toList());
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

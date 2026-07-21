@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -182,6 +183,54 @@ public class DocumentController {
             .toList();
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/v1/documents/{id}
+     *
+     * Returns a specific document for the authenticated student.
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<Map<String, Object>> getDocument(@PathVariable Long id) {
+        User user = getCurrentUser();
+        DocumentUpload doc = documentUploadRepository.findById(id).orElse(null);
+
+        if (doc == null || !doc.getStudent().getId().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "id", doc.getId(),
+            "filename", doc.getFilename(),
+            "document_type", doc.getDocumentType(),
+            "verification_status", doc.getVerificationStatus(),
+            "verification_notes", doc.getVerificationNotes() != null ? doc.getVerificationNotes() : "",
+            "uploaded_at", doc.getUploadedAt().toString()
+        ));
+    }
+
+    /**
+     * DELETE /api/v1/documents/{id}
+     *
+     * Deletes a document from Cloudinary and the database.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ApiResponse> deleteDocument(@PathVariable Long id) {
+        User user = getCurrentUser();
+        try {
+            verificationService.deleteDocument(id, user);
+            return ResponseEntity.ok(ApiResponse.builder()
+                .success(true)
+                .message("Document deleted successfully.")
+                .build());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(
+                ApiResponse.builder().success(false).message(e.getMessage()).build());
+        } catch (Exception e) {
+            log.error("Failed to delete document {}: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                ApiResponse.builder().success(false).message("Could not delete document").build());
+        }
     }
 
     // ── Admin: Suspicious Document Queue ─────────────────────────────────────

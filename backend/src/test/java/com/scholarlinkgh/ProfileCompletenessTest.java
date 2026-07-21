@@ -15,7 +15,7 @@ public class ProfileCompletenessTest {
         profile.setGpa(3.5);
         profile.setCountryPreference("UK");
         profile.setLanguageProficiency("English:Fluent");
-        profile.setFinancialNeed(true);
+        profile.setFinancialNeed("HIGH");
 
         int filledFields = 0;
         int totalFields = 6;
@@ -30,8 +30,7 @@ public class ProfileCompletenessTest {
         }
 
         boolean hasCountry = profile.getCountryPreference() != null && !profile.getCountryPreference().isBlank();
-        // Assume financialNeed is filled
-        
+        boolean hasFinancialNeed = profile.getFinancialNeed() != null && !profile.getFinancialNeed().isBlank();
         if (hasInstitution && hasField && hasGpa && hasCountry) {
             nextStep = "/profile-setup-step-3";
         }
@@ -40,7 +39,7 @@ public class ProfileCompletenessTest {
         if (hasField) filledFields++;
         if (hasGpa) filledFields++;
         if (hasCountry) filledFields++;
-        filledFields++; // financialNeed
+        if (hasFinancialNeed) filledFields++;
         
         boolean hasLanguage = profile.getLanguageProficiency() != null && !profile.getLanguageProficiency().isBlank();
         if (hasLanguage) filledFields++;

@@ -60,14 +60,5 @@ public class RegisterRequest {
     )
     private String password;
 
-    /**
-     * Education level — must be either SHS_GRADUATE or UNIVERSITY_GRADUATE.
-     * FR-08: determines which scholarships are shown to this user.
-     */
-    @NotBlank(message = "Education level is required")
-    @Pattern(
-        regexp = "^(SHS_GRADUATE|UNIVERSITY_GRADUATE)$",
-        message = "Education level must be SHS_GRADUATE or UNIVERSITY_GRADUATE"
-    )
-    private String educationLevel;
+
 }

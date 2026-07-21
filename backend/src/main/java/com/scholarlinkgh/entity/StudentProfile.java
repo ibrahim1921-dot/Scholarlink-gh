@@ -88,8 +88,18 @@ public class StudentProfile {
     @Column(length = 500)
     private String languageProficiency;
 
-    /** Whether the student has demonstrated financial need. */
-    private boolean financialNeed;
+    /**
+     * Standardized tests taken (e.g. "WASSCE,IELTS").
+     * Comma-separated string. Optional field for scholarship matching.
+     */
+    @Column(length = 500)
+    private String standardizedTests;
+
+    /** Whether the student has demonstrated financial need ("LOW", "MEDIUM", "HIGH"). */
+    private String financialNeed;
+
+    /** Intended Start Date (e.g., "Fall 2025"). Optional. */
+    private String intendedStartDate;
 
     // ── Push notifications ──────────────────────────────────────────────────────
 

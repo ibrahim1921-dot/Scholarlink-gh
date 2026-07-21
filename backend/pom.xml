@@ -158,6 +158,13 @@
             <version>2.9.2</version>
         </dependency>
 
+        <!-- Cloudinary SDK for file uploads -->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http44</artifactId>
+            <version>1.38.0</version>
+        </dependency>
+
         <!-- Test dependencies — corrected artifact IDs -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -1,5 +1,6 @@
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\backend\BackendApplication.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\config\CacheConfig.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\config\CloudinaryConfig.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\config\DataInitializer.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\config\GlobalExceptionHandler.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\config\JwtConfig.java
@@ -31,6 +32,7 @@ C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\sc
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\ScholarshipRequest.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\ScholarshipResponse.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\VerifyOtpRequest.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ApplicationMode.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ApplicationStatus.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ApplicationTracker.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\AuditLog.java
@@ -46,6 +48,7 @@ C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\sc
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ScholarshipCategory.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ScholarshipMatch.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ScholarshipReport.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ScholarshipStatus.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\StudentProfile.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\User.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\VerificationStatus.java

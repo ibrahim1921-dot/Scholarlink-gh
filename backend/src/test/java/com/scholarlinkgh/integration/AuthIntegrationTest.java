@@ -49,7 +49,7 @@ class AuthIntegrationTest extends BaseIntegrationTest {
             request.setEmail("newuser@test.com");
             request.setPhoneNumber("+233501111111");
             request.setPassword("Test@1234");
-            request.setEducationLevel("SHS_GRADUATE");
+
 
             // Act & Assert
             mockMvc.perform(post("/api/v1/auth/register")
@@ -69,7 +69,7 @@ class AuthIntegrationTest extends BaseIntegrationTest {
             request.setEmail(STUDENT_EMAIL);
             request.setPhoneNumber("+233502222222");
             request.setPassword("Test@1234");
-            request.setEducationLevel("SHS_GRADUATE");
+
 
             // Act & Assert
             mockMvc.perform(post("/api/v1/auth/register")

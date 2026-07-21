@@ -20,6 +20,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * Scholarship Controller — REST endpoints for scholarship listings.
  *
@@ -54,12 +56,38 @@ public class ScholarshipController {
             @RequestParam(required = false) String category,
             @RequestParam(required = false) String country,
             @RequestParam(required = false) String field,
-            @RequestParam(required = false) String deadline
+            @RequestParam(required = false) String deadline,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status
     ) {
         Page<ScholarshipResponse> scholarships = scholarshipService.getScholarships(
-            page, size, category, country, field, deadline
+            page, size, category, country, field, deadline, search, status
         );
         return ResponseEntity.ok(scholarships);
+    }
+
+    /**
+     * GET /api/v1/scholarships/countries
+     * Returns distinct destination countries across all active, verified scholarships.
+     * Used by the Country filter dropdown.
+     *
+     * Requires: valid JWT token (any role)
+     */
+    @GetMapping("/countries")
+    public ResponseEntity<List<String>> getDistinctCountries() {
+        return ResponseEntity.ok(scholarshipService.getDistinctCountries());
+    }
+
+    /**
+     * GET /api/v1/scholarships/fields
+     * Returns normalized, deduplicated field-of-study values across all active, verified scholarships.
+     * Used by the Field filter dropdown.
+     *
+     * Requires: valid JWT token (any role)
+     */
+    @GetMapping("/fields")
+    public ResponseEntity<List<String>> getDistinctFields() {
+        return ResponseEntity.ok(scholarshipService.getDistinctFields());
     }
 
     /**

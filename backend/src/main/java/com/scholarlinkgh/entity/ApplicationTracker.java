@@ -74,6 +74,10 @@ public class ApplicationTracker {
     @Column(nullable = false, length = 20)
     private ApplicationStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private ApplicationMode applicationMode = ApplicationMode.DIRECT;
+
     /**
      * Personal notes the student has written about this application.
      */

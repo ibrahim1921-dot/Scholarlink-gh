@@ -2,6 +2,7 @@ package com.scholarlinkgh.dto;
 
 import com.scholarlinkgh.entity.Scholarship;
 import com.scholarlinkgh.entity.ScholarshipCategory;
+import com.scholarlinkgh.entity.ScholarshipStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -38,7 +39,12 @@ public class ScholarshipResponse {
     private String requirements;
     private String selectionCriteria;
     private String additionalNotes;
+    private String imageUrl;
+    private String status;
+    private boolean allowsAssistedApplication;
+    private Double assistedApplicationFee;
     private boolean verified;
+    private Integer reportCount;
     private LocalDateTime createdAt;
 
     /**
@@ -46,6 +52,20 @@ public class ScholarshipResponse {
      * Calculates daysUntilDeadline automatically.
      */
     public static ScholarshipResponse from(Scholarship scholarship) {
+        long daysUntil = ChronoUnit.DAYS.between(LocalDate.now(), scholarship.getDeadline());
+
+        // Resolve status: use the explicit field when set, otherwise derive from deadline
+        String resolvedStatus;
+        if (scholarship.getStatus() != null) {
+            resolvedStatus = scholarship.getStatus().name();
+        } else if (daysUntil < 0) {
+            resolvedStatus = ScholarshipStatus.CLOSED.name();
+        } else if (daysUntil == 0) {
+            resolvedStatus = ScholarshipStatus.CLOSING_SOON.name();
+        } else {
+            resolvedStatus = ScholarshipStatus.OPEN.name();
+        }
+
         return ScholarshipResponse.builder()
             .id(scholarship.getId())
             .name(scholarship.getName())
@@ -56,14 +76,17 @@ public class ScholarshipResponse {
             .gpaRequirement(scholarship.getGpaRequirement())
             .fundingCoverage(scholarship.getFundingCoverage())
             .deadline(scholarship.getDeadline())
-            .daysUntilDeadline(
-                ChronoUnit.DAYS.between(LocalDate.now(), scholarship.getDeadline())
-            )
+            .daysUntilDeadline(daysUntil)
             .officialLink(scholarship.getOfficialLink())
             .requirements(scholarship.getRequirements())
             .selectionCriteria(scholarship.getSelectionCriteria())
             .additionalNotes(scholarship.getAdditionalNotes())
+            .imageUrl(scholarship.getImageUrl())
+            .status(resolvedStatus)
+            .allowsAssistedApplication(scholarship.isAllowsAssistedApplication())
+            .assistedApplicationFee(scholarship.getAssistedApplicationFee())
             .verified(scholarship.isVerified())
+            .reportCount(scholarship.getReportCount())
             .createdAt(scholarship.getCreatedAt())
             .build();
     }

@@ -1,5 +1,6 @@
 package com.scholarlinkgh.dto;
 
+import com.scholarlinkgh.entity.ApplicationMode;
 import com.scholarlinkgh.entity.ApplicationStatus;
 import com.scholarlinkgh.entity.ApplicationTracker;
 import lombok.Builder;
@@ -24,6 +25,7 @@ public class ApplicationTrackerResponse {
     /** FR-26: days remaining until the scholarship deadline (computed, not stored). */
     private Long deadlineCountdown;
     private ApplicationStatus status;
+    private ApplicationMode applicationMode;
     private String notes;
     private String deadlineRemindersSent;
     private LocalDateTime submittedAt;
@@ -44,6 +46,7 @@ public class ApplicationTrackerResponse {
             .scholarshipDeadline(tracker.getScholarship().getDeadline())
             .deadlineCountdown(tracker.getDeadlineCountdown())
             .status(tracker.getStatus())
+            .applicationMode(tracker.getApplicationMode())
             .notes(tracker.getNotes())
             .deadlineRemindersSent(tracker.getDeadlineRemindersSent())
             .submittedAt(tracker.getSubmittedAt())
