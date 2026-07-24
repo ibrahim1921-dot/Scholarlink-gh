@@ -3,24 +3,37 @@ package com.scholarlinkgh.service;
 import com.scholarlinkgh.dto.ApiResponse;
 import com.scholarlinkgh.dto.JobListingRequest;
 import com.scholarlinkgh.dto.JobListingResponse;
+import com.scholarlinkgh.entity.ApplicationMode;
+import com.scholarlinkgh.entity.ApplicationStatus;
+import com.scholarlinkgh.entity.DocumentUpload;
 import com.scholarlinkgh.entity.JobApplication;
 import com.scholarlinkgh.entity.JobListing;
+import com.scholarlinkgh.entity.EmploymentType;
+import com.scholarlinkgh.entity.ExperienceLevel;
+import com.scholarlinkgh.entity.WorkMode;
 import com.scholarlinkgh.entity.User;
+import com.scholarlinkgh.repository.DocumentUploadRepository;
 import com.scholarlinkgh.repository.JobApplicationRepository;
 import com.scholarlinkgh.repository.JobListingRepository;
+import com.scholarlinkgh.repository.SavedJobRepository;
+import com.scholarlinkgh.entity.SavedJob;
 import com.scholarlinkgh.repository.StudentProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.scholarlinkgh.exception.ResourceNotFoundException;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * JobService — manages job listings, job applications, and AI-matched job results.
@@ -39,6 +52,8 @@ public class JobService {
     private final JobListingRepository jobListingRepository;
     private final JobApplicationRepository jobApplicationRepository;
     private final StudentProfileRepository studentProfileRepository;
+    private final SavedJobRepository savedJobRepository;
+    private final DocumentUploadRepository documentUploadRepository;
     private final GeminiAIService geminiAIService;
     private final AuditService auditService;
 
@@ -62,7 +77,11 @@ public class JobService {
             .requirements(request.getRequirements())
             .salaryRange(request.getSalaryRange())
             .applicationUrl(request.getApplicationUrl())
+            .imageUrl(request.getImageUrl())
             .applicationDeadline(request.getApplicationDeadline())
+            .employmentType(request.getEmploymentType())
+            .experienceLevel(request.getExperienceLevel())
+            .workMode(request.getWorkMode())
             .active(true)
             .createdBy(admin)
             .build();
@@ -82,11 +101,22 @@ public class JobService {
      * Returns paginated active job listings.
      */
     @Transactional(readOnly = true)
-    public Page<JobListingResponse> getJobs(int page, int size) {
+    public Page<JobListingResponse> getJobs(String search, EmploymentType employmentType, ExperienceLevel experienceLevel, WorkMode workMode, int page, int size) {
+        String safeSearch = (search == null || search.trim().isEmpty()) ? "" : search.trim();
         size = Math.min(size, 50);
         Pageable pageable = PageRequest.of(page, size);
-        return jobListingRepository.findByActiveTrueOrderByCreatedAtDesc(pageable)
+        return jobListingRepository.findJobsWithFilters(safeSearch, employmentType, experienceLevel, workMode, pageable)
             .map(JobListingResponse::from);
+    }
+
+    /**
+     * Returns a specific job listing by ID.
+     */
+    @Transactional(readOnly = true)
+    public JobListingResponse getJobById(Long id) {
+        JobListing job = jobListingRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Job listing not found"));
+        return JobListingResponse.from(job);
     }
 
     /**
@@ -111,14 +141,31 @@ public class JobService {
     }
 
     /**
-     * Records a student's application to a job listing.
-     * FR-44: prevents duplicate applications via unique constraint.
+     * POST /api/v1/jobs/{id}/generate-cover-letter
+     * Generates a cover letter draft for the user to review before submitting.
+     */
+    public ApiResponse generateCoverLetterDraft(Long jobId) {
+        User user = getCurrentUser();
+        JobListing job = jobListingRepository.findById(jobId)
+            .orElseThrow(() -> new ResourceNotFoundException("Job listing not found"));
+        
+        String draft = geminiAIService.generateCoverLetter(user, job.getTitle(), job.getCompany(), job.getDescription());
+        return ApiResponse.builder()
+            .success(true)
+            .message(draft)
+            .build();
+    }
+
+    /**
+     * Applies to a job. Creates an ASSISTED Application if a coverLetter or documents are provided.
+     * Direct applications are bypassed and handled entirely by the frontend.
      *
      * @param jobId       the job to apply for
      * @param coverLetter optional cover letter text
+     * @param documentIds optional list of document IDs to attach
      */
     @Transactional
-    public ApiResponse applyToJob(Long jobId, String coverLetter) {
+    public ApiResponse applyToJob(Long jobId, String coverLetter, List<Long> documentIds) {
         User user = getCurrentUser();
 
         JobListing job = jobListingRepository.findById(jobId)
@@ -134,10 +181,23 @@ public class JobService {
                 .message("You have already applied for this job.").build();
         }
 
+        Set<DocumentUpload> documents = new HashSet<>();
+        if (documentIds != null && !documentIds.isEmpty()) {
+            documents = new HashSet<>(documentUploadRepository.findAllById(documentIds));
+            // Ensure documents belong to user
+            for (DocumentUpload doc : documents) {
+                if (!doc.getStudent().getId().equals(user.getId())) {
+                    throw new AccessDeniedException("You do not have permission to attach document ID " + doc.getId());
+                }
+            }
+        }
+
         JobApplication application = JobApplication.builder()
             .student(user)
             .job(job)
             .coverLetter(coverLetter)
+            .documents(documents)
+            .applicationMode(ApplicationMode.ASSISTED)
             .build();
 
         jobApplicationRepository.save(application);
@@ -157,12 +217,63 @@ public class JobService {
     }
 
     /**
+     * Toggles the saved status of a job listing for the current user.
+     */
+    @Transactional
+    public java.util.Map<String, Boolean> toggleSaveJob(Long id) {
+        User student = getCurrentUser();
+        JobListing job = jobListingRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Job listing not found"));
+
+        boolean exists = savedJobRepository.existsByStudentAndJob(student, job);
+        if (exists) {
+            savedJobRepository.findByStudentAndJob(student, job)
+                .ifPresent(savedJobRepository::delete);
+            return java.util.Map.of("saved", false);
+        } else {
+            SavedJob saved = SavedJob.builder()
+                .student(student)
+                .job(job)
+                .build();
+            savedJobRepository.save(saved);
+            return java.util.Map.of("saved", true);
+        }
+    }
+
+    /**
+     * Returns the current user's saved jobs.
+     */
+    @Transactional(readOnly = true)
+    public List<JobListingResponse> getSavedJobs() {
+        User student = getCurrentUser();
+        return savedJobRepository.findByStudentOrderBySavedAtDesc(student)
+            .stream()
+            .map(SavedJob::getJob)
+            .filter(JobListing::isActive)
+            .map(JobListingResponse::from)
+            .toList();
+    }
+
+    /**
      * Generates a structured CV for the authenticated student.
      * FR-45: Markdown-formatted output ready for PDF conversion.
      */
     public String generateCv() {
         User user = getCurrentUser();
         return geminiAIService.generateCv(user);
+    }
+
+    /**
+     * Generates a tailored CV for a specific job listing.
+     *
+     * @param jobId the job to tailor the CV to
+     * @return Markdown-formatted CV text
+     */
+    public String generateTailoredCv(Long jobId) {
+        User user = getCurrentUser();
+        JobListing job = jobListingRepository.findById(jobId)
+            .orElseThrow(() -> new ResourceNotFoundException("Job listing not found"));
+        return geminiAIService.generateTailoredCv(user, job);
     }
 
     /**
@@ -186,6 +297,26 @@ public class JobService {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    /**
+     * Updates the status of an existing job application bypassing ownership check.
+     * Intended for admin use only.
+     */
+    @Transactional
+    public JobApplication updateStatusByAdmin(Long applicationId, ApplicationStatus status) {
+        JobApplication application = jobApplicationRepository.findById(applicationId)
+            .orElseThrow(() -> new ResourceNotFoundException("Job application not found"));
+
+        if (status != null) {
+            application.setStatus(status);
+        }
+
+        JobApplication updated = jobApplicationRepository.save(application);
+        User admin = getCurrentUser();
+        log.info("Admin {} updated job application {} to status {}", admin.getEmail(), applicationId, updated.getStatus());
+
+        return updated;
+    }
 
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();

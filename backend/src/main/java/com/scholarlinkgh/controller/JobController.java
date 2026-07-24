@@ -4,6 +4,9 @@ import com.scholarlinkgh.dto.ApiResponse;
 import com.scholarlinkgh.dto.JobApplicationRequest;
 import com.scholarlinkgh.dto.JobListingRequest;
 import com.scholarlinkgh.dto.JobListingResponse;
+import com.scholarlinkgh.entity.EmploymentType;
+import com.scholarlinkgh.entity.ExperienceLevel;
+import com.scholarlinkgh.entity.WorkMode;
 import com.scholarlinkgh.service.JobService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -66,9 +69,24 @@ public class JobController {
      */
     @GetMapping
     public ResponseEntity<Page<JobListingResponse>> getJobs(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) EmploymentType employmentType,
+            @RequestParam(required = false) ExperienceLevel experienceLevel,
+            @RequestParam(required = false) WorkMode workMode,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(jobService.getJobs(page, size));
+        return ResponseEntity.ok(jobService.getJobs(search, employmentType, experienceLevel, workMode, page, size));
+    }
+
+    /**
+     * GET /api/v1/jobs/{id}
+     * Returns a specific job listing by ID.
+     *
+     * Requires: valid JWT
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<JobListingResponse> getJobById(@PathVariable Long id) {
+        return ResponseEntity.ok(jobService.getJobById(id));
     }
 
     /**
@@ -90,9 +108,14 @@ public class JobController {
         }
     }
 
+    @PostMapping("/{id}/generate-cover-letter")
+    public ResponseEntity<ApiResponse> generateCoverLetterDraft(@PathVariable Long id) {
+        return ResponseEntity.ok(jobService.generateCoverLetterDraft(id));
+    }
+
     /**
      * POST /api/v1/jobs/{id}/apply
-     * Submits a job application with an optional cover letter.
+     * Submits a job application with an optional cover letter and documents.
      *
      * FR-44: duplicate applications are rejected (unique constraint).
      * Requires: valid JWT
@@ -102,7 +125,8 @@ public class JobController {
             @PathVariable Long id,
             @RequestBody(required = false) JobApplicationRequest request) {
         String coverLetter = (request != null) ? request.getCoverLetter() : null;
-        ApiResponse response = jobService.applyToJob(id, coverLetter);
+        java.util.List<Long> documentIds = (request != null) ? request.getDocumentIds() : null;
+        ApiResponse response = jobService.applyToJob(id, coverLetter, documentIds);
         return ResponseEntity.ok(response);
     }
 
@@ -118,6 +142,24 @@ public class JobController {
     }
 
     /**
+     * POST /api/v1/jobs/{id}/save
+     * Toggles the saved status of a job listing for the current user.
+     */
+    @PostMapping("/{id}/save")
+    public ResponseEntity<java.util.Map<String, Boolean>> toggleSaveJob(@PathVariable Long id) {
+        return ResponseEntity.ok(jobService.toggleSaveJob(id));
+    }
+
+    /**
+     * GET /api/v1/jobs/saved
+     * Returns all saved active jobs for the authenticated student.
+     */
+    @GetMapping("/saved")
+    public ResponseEntity<java.util.List<JobListingResponse>> getSavedJobs() {
+        return ResponseEntity.ok(jobService.getSavedJobs());
+    }
+
+    /**
      * POST /api/v1/jobs/generate-cv
      * Generates a professional Markdown CV from the student's profile.
      *
@@ -127,6 +169,16 @@ public class JobController {
     @PostMapping("/generate-cv")
     public ResponseEntity<ApiResponse> generateCv() {
         String cv = jobService.generateCv();
+        return ResponseEntity.ok(ApiResponse.builder().success(true).message(cv).build());
+    }
+
+    /**
+     * POST /api/v1/jobs/{id}/generate-cv
+     * Generates a professional Markdown CV tailored to a specific job.
+     */
+    @PostMapping("/{id}/generate-cv")
+    public ResponseEntity<ApiResponse> generateTailoredCv(@PathVariable Long id) {
+        String cv = jobService.generateTailoredCv(id);
         return ResponseEntity.ok(ApiResponse.builder().success(true).message(cv).build());
     }
 

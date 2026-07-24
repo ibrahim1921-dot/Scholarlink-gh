@@ -130,6 +130,36 @@ public class ApplicationTrackerService {
     }
 
     /**
+     * Updates the status of an existing tracker bypassing ownership check.
+     * Intended for admin use only.
+     */
+    @Transactional
+    public ApplicationTrackerResponse updateStatusByAdmin(Long trackerId, ApplicationStatus status) {
+        ApplicationTracker tracker = trackerRepository.findById(trackerId)
+            .orElseThrow(() -> new RuntimeException("Tracker not found"));
+
+        if (status != null) {
+            tracker.setStatus(status);
+
+            // Mark submitted_at when transitioning to SUBMITTED
+            if (status == ApplicationStatus.SUBMITTED && tracker.getSubmittedAt() == null) {
+                tracker.setSubmittedAt(LocalDateTime.now());
+            }
+
+            // Mark awarded_at when transitioning to AWARDED
+            if (status == ApplicationStatus.AWARDED && tracker.getAwardedAt() == null) {
+                tracker.setAwardedAt(LocalDateTime.now());
+            }
+        }
+
+        ApplicationTracker updated = trackerRepository.save(tracker);
+        User admin = getCurrentUser();
+        log.info("Admin {} updated tracker {} to status {}", admin.getEmail(), trackerId, updated.getStatus());
+
+        return ApplicationTrackerResponse.from(updated);
+    }
+
+    /**
      * Deletes a tracker. Only the owning student can delete their tracker.
      */
     @Transactional

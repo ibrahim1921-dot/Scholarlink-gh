@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.scholarlinkgh.entity.EligibilityCheck;
+import com.scholarlinkgh.entity.JobListing;
 import com.scholarlinkgh.entity.Scholarship;
 import com.scholarlinkgh.entity.ScholarshipMatch;
 import com.scholarlinkgh.entity.StudentProfile;
@@ -45,9 +46,9 @@ import java.util.concurrent.TimeUnit;
  *   FR-46: AI cover letter generation
  *   FR-40: plagiarism / similarity detection for personal statements
  *
- * Match results are cached for 24 hours in the database to avoid repeated
- * API calls for unchanged profiles. The cache is invalidated when the
- * student updates their profile.
+ * Match and eligibility results are cached for 24 hours in the database to avoid repeated
+ * API calls for unchanged profiles. Both caches are explicitly invalidated via ProfileController
+ * when the student updates their profile.
  *
  * OWASP A02: the API key is injected from application.properties and never
  * logged or returned in any API response.
@@ -212,6 +213,7 @@ public class GeminiAIService {
 
         String prompt = buildEligibilityPrompt(profile, scholarship);
         log.info("Calling Gemini for eligibility check: user={}, scholarship={}", user.getEmail(), scholarship.getId());
+        log.info("ACTUAL PROMPT TEXT SENT TO GEMINI:\n{}", prompt);
         String rawResponse = callGemini(prompt);
 
         if (rawResponse == null) {
@@ -222,11 +224,11 @@ public class GeminiAIService {
         log.debug("Gemini eligibility raw response: {}", rawResponse);
         String jsonBlock = extractJsonBlock(rawResponse);
 
-        // Parse the JSON block to extract the 'meets' boolean for isEligible field
+        // Parse the JSON block to extract the 'overallMeets' boolean for isEligible field
         boolean isEligible = false;
         try {
             JsonNode root = objectMapper.readTree(jsonBlock);
-            isEligible = root.path("meets").asBoolean(false);
+            isEligible = root.path("overallMeets").asBoolean(false);
         } catch (Exception e) {
             log.warn("Failed to parse 'meets' boolean from Gemini eligibility response: {}", e.getMessage());
         }
@@ -378,6 +380,7 @@ public class GeminiAIService {
             Country Preference: %s
             Languages: %s
             Standardized Tests: %s
+            Skills: %s
             Bio: %s
             Achievements: %s
 
@@ -389,6 +392,8 @@ public class GeminiAIService {
             5. References (state "Available upon request")
 
             Use professional, concise language. Make it compelling for scholarship and job applications.
+
+            CRITICAL: Respond in plain text only. Do NOT use markdown formatting, asterisks, hashes, or markdown list characters.
             """,
             user.getDisplayName(),
             user.getEmail(),
@@ -400,12 +405,82 @@ public class GeminiAIService {
             orNA(profile.getCountryPreference()),
             orNA(profile.getLanguageProficiency()),
             orNA(profile.getStandardizedTests()),
+            profile.getSkills() != null && !profile.getSkills().isEmpty() ? String.join(", ", profile.getSkills()) : "Not specified",
             orNA(profile.getBio()),
             orNA(profile.getAchievements())
         );
 
         String rawResponse = callGemini(prompt);
         return rawResponse != null ? rawResponse : "Unable to generate CV at this time. Please try again.";
+    }
+
+    /**
+     * Generates a tailored CV for a specific job application.
+     */
+    public String generateTailoredCv(User user, JobListing job) {
+        StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
+        if (profile == null) {
+            return "Please complete your student profile before generating a CV.";
+        }
+
+        String prompt = String.format("""
+            You are a professional CV writer specialising in graduate and student CVs.
+
+            Generate a complete, well-structured Markdown CV for this student tailored to the specific job listing below.
+
+            JOB LISTING:
+            Title: %s
+            Company: %s
+            Description: %s
+            Requirements: %s
+
+            STUDENT PROFILE:
+            Name: %s
+            Email: %s
+            Education Level: %s
+            Institution: %s
+            Field of Study: %s
+            GPA: %s
+            Graduation Year: %s
+            Country Preference: %s
+            Languages: %s
+            Standardized Tests: %s
+            Skills: %s
+            Bio: %s
+            Achievements: %s
+
+            Format the CV with these sections:
+            1. Personal Profile (3-4 sentences, strongly connecting the student to the job requirements)
+            2. Education
+            3. Skills & Languages (highlight those relevant to the job)
+            4. Achievements & Awards
+            5. References (state "Available upon request")
+
+            Use professional, concise language. Make it compelling for this specific job application.
+
+            CRITICAL: Respond in plain text only. Do NOT use markdown formatting, asterisks, hashes, or markdown list characters.
+            """,
+            job.getTitle(),
+            job.getCompany(),
+            orNA(job.getDescription()),
+            job.getRequirements() != null && !job.getRequirements().isEmpty() ? String.join(", ", job.getRequirements()) : "Not specified",
+            user.getDisplayName(),
+            user.getEmail(),
+            orNA(profile.getEducationLevel()),
+            orNA(profile.getInstitution()),
+            orNA(profile.getFieldOfStudy()),
+            profile.getGpa() != null ? profile.getGpa().toString() : "N/A",
+            profile.getGraduationYear() != null ? profile.getGraduationYear().toString() : "N/A",
+            orNA(profile.getCountryPreference()),
+            orNA(profile.getLanguageProficiency()),
+            orNA(profile.getStandardizedTests()),
+            profile.getSkills() != null && !profile.getSkills().isEmpty() ? String.join(", ", profile.getSkills()) : "Not specified",
+            orNA(profile.getBio()),
+            orNA(profile.getAchievements())
+        );
+
+        String rawResponse = callGemini(prompt);
+        return rawResponse != null ? rawResponse : "Unable to generate tailored CV at this time. Please try again.";
     }
 
     // ── FR-46: Cover Letter Generator ────────────────────────────────────────
@@ -438,6 +513,7 @@ public class GeminiAIService {
             - Name: %s
             - Education: %s at %s, GPA: %s
             - Field: %s
+            - Skills: %s
             - Bio: %s
             - Achievements: %s
 
@@ -447,6 +523,8 @@ public class GeminiAIService {
             - Highlight relevant achievements
             - Strong opening and closing
             - Do NOT use generic phrases like "I am writing to apply for..."
+
+            CRITICAL: Respond in plain text only. Do NOT use markdown formatting, asterisks, hashes, or markdown list characters.
             """,
             jobTitle,
             company,
@@ -456,12 +534,43 @@ public class GeminiAIService {
             orNA(profile.getInstitution()),
             profile.getGpa() != null ? profile.getGpa().toString() : "N/A",
             orNA(profile.getFieldOfStudy()),
+            profile.getSkills() != null && !profile.getSkills().isEmpty() ? String.join(", ", profile.getSkills()) : "Not specified",
             orNA(profile.getBio()),
             orNA(profile.getAchievements())
         );
 
         String rawResponse = callGemini(prompt);
         return rawResponse != null ? rawResponse : "Unable to generate cover letter at this time. Please try again.";
+    }
+
+    // ── FR-xx: General AI Assistant ───────────────────────────────────────────
+
+    /**
+     * Answers a free-form question from the student.
+     * Optionally includes document text as context if provided.
+     *
+     * @param user         the authenticated student
+     * @param message      the user's message
+     * @param documentText optional document text
+     * @return the AI's response
+     */
+    public String askAssistant(User user, String message, String documentText) {
+        StringBuilder prompt = new StringBuilder();
+        prompt.append("You are a helpful and expert scholarship and career assistant for Ghanaian students.\n");
+        prompt.append("Answer the following question from the student.\n");
+        prompt.append("CRITICAL: Respond in plain text only. Do NOT use markdown formatting, asterisks, hashes, or markdown list characters.\n\n");
+
+        if (documentText != null && !documentText.isBlank()) {
+            prompt.append("The student has attached a document for context. Document text:\n\"\"\"\n");
+            prompt.append(documentText.substring(0, Math.min(documentText.length(), 10000)));
+            prompt.append("\n\"\"\"\n\n");
+        }
+
+        prompt.append("Student's Message:\n");
+        prompt.append(message);
+
+        String rawResponse = callGemini(prompt.toString());
+        return rawResponse != null ? rawResponse : "Unable to process your request at this time. Please try again.";
     }
 
     // ── Document Verification Support ─────────────────────────────────────────
@@ -564,6 +673,7 @@ public class GeminiAIService {
         sb.append("Country Preference: ").append(orNA(profile.getCountryPreference())).append("\n");
         sb.append("Languages: ").append(orNA(profile.getLanguageProficiency())).append("\n");
         sb.append("Standardized Tests: ").append(orNA(profile.getStandardizedTests())).append("\n");
+        sb.append("Skills: ").append(profile.getSkills() != null && !profile.getSkills().isEmpty() ? String.join(", ", profile.getSkills()) : "Not specified").append("\n");
         sb.append("Financial Need: ").append(profile.getFinancialNeed() != null ? profile.getFinancialNeed() : "Not specified").append("\n");
         sb.append("Bio: ").append(orNA(profile.getBio())).append("\n");
         sb.append("Achievements: ").append(orNA(profile.getAchievements())).append("\n\n");
@@ -619,10 +729,16 @@ public class GeminiAIService {
             Education Level: %s
             GPA: %s
             Field of Study: %s
+            Institution: %s
+            Graduation Year: %s
+            Intended Start Date: %s
             Country Preference: %s
             Financial Need: %s
             Languages: %s
             Standardized Tests: %s
+            Skills: %s
+            Bio: %s
+            Achievements: %s
 
             SCHOLARSHIP REQUIREMENTS:
             Name: %s
@@ -633,21 +749,32 @@ public class GeminiAIService {
             Requirements: %s
             Selection Criteria: %s
 
+            MATCHING RULES (CRITICAL):
+            1. Destination Country: The requirement is MET if ANY country in the student's 'Country Preference' list matches the scholarship's 'Destination Country' (or if the scholarship says 'Various' or 'All Countries'). Do NOT require an exact match of the entire list.
+            2. Eligible Fields: The requirement is MET if the student's 'Field of Study' matches ANY field in the scholarship's 'Eligible Fields' list (or if the scholarship says 'All Fields' or 'Any'). Do NOT require an exact match of the entire list.
+            3. Independence: Each criterion's 'reason' must ONLY reference that criterion's own data. Do not mention or factor in any other criterion's status when evaluating a specific criterion.
+
             Respond with ONLY a JSON object (no markdown):
             {
-              "meets": <true|false>,
-              "criteria_met": ["<criterion1>", "<criterion2>"],
-              "criteria_missing": ["<criterion1>", "<criterion2>"],
-              "actions_required": ["<action1>", "<action2>"]
+              "criteria": [
+                { "id": "<criterion_id>", "label": "<criterion_label>", "met": <true|false>, "reason": "<explanation>" }
+              ],
+              "overallMeets": <true|false>
             }
             """,
             orNA(profile.getEducationLevel()),
             profile.getGpa() != null ? profile.getGpa() : "Not provided",
             orNA(profile.getFieldOfStudy()),
+            orNA(profile.getInstitution()),
+            profile.getGraduationYear() != null ? profile.getGraduationYear().toString() : "Not provided",
+            orNA(profile.getIntendedStartDate()),
             orNA(profile.getCountryPreference()),
             profile.getFinancialNeed() != null ? profile.getFinancialNeed() : "Not specified",
             orNA(profile.getLanguageProficiency()),
             orNA(profile.getStandardizedTests()),
+            profile.getSkills() != null && !profile.getSkills().isEmpty() ? String.join(", ", profile.getSkills()) : "Not specified",
+            orNA(profile.getBio()),
+            orNA(profile.getAchievements()),
             scholarship.getName(),
             scholarship.getCategory(),
             orNA(scholarship.getDestinationCountry()),
@@ -703,8 +830,10 @@ public class GeminiAIService {
             Write a 600-800 word personal statement that:
             1. Has a compelling opening that grabs attention
             2. Clearly connects the student's background to this specific scholarship
-            3. Demonstrates genuine motivation and career goals
-            4. Addresses the scholarship criteria directly
+            3. Sounds authentic, professional, and confident
+            4. Meets the specific requirements of the provider
+
+            CRITICAL: Respond in plain text only. Do NOT use markdown formatting, asterisks, hashes, or markdown list characters.
             5. Has a strong, memorable conclusion
 
             Write the statement directly (no headers, just the prose).

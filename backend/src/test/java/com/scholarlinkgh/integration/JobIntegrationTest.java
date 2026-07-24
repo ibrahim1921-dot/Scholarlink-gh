@@ -61,6 +61,9 @@ class JobIntegrationTest extends BaseIntegrationTest {
                 .description("An internship for aspiring software engineers")
                 .location("Accra, Ghana")
                 .active(true)
+                .employmentType(com.scholarlinkgh.entity.EmploymentType.INTERNSHIP)
+                .experienceLevel(com.scholarlinkgh.entity.ExperienceLevel.ENTRY_LEVEL)
+                .workMode(com.scholarlinkgh.entity.WorkMode.ON_SITE)
                 .createdBy(adminUser)
                 .build();
             jobListingRepository.save(job);
@@ -90,6 +93,9 @@ class JobIntegrationTest extends BaseIntegrationTest {
             request.setCompany("Analytics Inc");
             request.setDescription("A data analyst position");
             request.setLocation("Remote");
+            request.setEmploymentType(com.scholarlinkgh.entity.EmploymentType.FULL_TIME);
+            request.setExperienceLevel(com.scholarlinkgh.entity.ExperienceLevel.MID_LEVEL);
+            request.setWorkMode(com.scholarlinkgh.entity.WorkMode.REMOTE);
 
             // Act & Assert
             mockMvc.perform(post("/api/v1/jobs")
@@ -99,6 +105,23 @@ class JobIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title", is("Data Analyst")))
                 .andExpect(jsonPath("$.company", is("Analytics Inc")));
+        }
+
+        @Test
+        @DisplayName("should return 400 when required fields are missing")
+        void shouldReturn400WhenMissingFields() throws Exception {
+            // Arrange
+            JobListingRequest request = new JobListingRequest();
+            request.setTitle("Data Analyst");
+            request.setCompany("Analytics Inc");
+            // Deliberately omitting employmentType, experienceLevel, workMode
+
+            // Act & Assert
+            mockMvc.perform(post("/api/v1/jobs")
+                    .header("Authorization", bearer(adminToken))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
         }
 
         @Test

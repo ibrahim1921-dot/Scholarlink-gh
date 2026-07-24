@@ -3,6 +3,7 @@ package com.scholarlinkgh.repository;
 import com.scholarlinkgh.entity.JobApplication;
 import com.scholarlinkgh.entity.JobListing;
 import com.scholarlinkgh.entity.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -17,6 +18,7 @@ import java.util.Optional;
 public interface JobApplicationRepository extends JpaRepository<JobApplication, Long> {
 
     /** Returns all job applications for a student. */
+    @EntityGraph(attributePaths = {"job", "job.requirements", "student", "documents"})
     List<JobApplication> findByStudentOrderByAppliedAtDesc(User student);
 
     /** Finds a specific application for uniqueness check. */

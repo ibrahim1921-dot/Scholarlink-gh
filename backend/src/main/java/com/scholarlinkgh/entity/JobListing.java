@@ -2,6 +2,8 @@ package com.scholarlinkgh.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -16,8 +18,12 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.CollectionTable;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
  * JobListing entity — represents a job or internship opportunity.
@@ -71,8 +77,13 @@ public class JobListing {
     private Double minimumGpa;
 
     /** Key requirements e.g. skills, experience. */
-    @Column(columnDefinition = "TEXT")
-    private String requirements;
+    @Column(name = "old_requirements", columnDefinition = "TEXT")
+    private String oldRequirements;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "job_requirements", joinColumns = @JoinColumn(name = "job_listing_id"))
+    @Column(name = "requirements", columnDefinition = "TEXT")
+    private List<String> requirements = new ArrayList<>();
 
     /** Salary range or "Competitive" if not disclosed. */
     @Column(length = 100)
@@ -82,8 +93,24 @@ public class JobListing {
     @Column(length = 500)
     private String applicationUrl;
 
+    /** Image URL for the listing. */
+    @Column(length = 500)
+    private String imageUrl;
+
     /** Last date to apply. */
     private LocalDateTime applicationDeadline;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private EmploymentType employmentType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private ExperienceLevel experienceLevel;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 50)
+    private WorkMode workMode;
 
     /** Whether this listing is currently visible to students. */
     @Column(nullable = false)

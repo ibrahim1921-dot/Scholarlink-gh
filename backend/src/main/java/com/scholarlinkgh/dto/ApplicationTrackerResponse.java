@@ -22,6 +22,9 @@ public class ApplicationTrackerResponse {
     private String scholarshipName;
     private String scholarshipProvider;
     private LocalDate scholarshipDeadline;
+    private String imageUrl;
+    private String destinationCountry;
+    private String eligibleFields;
     /** FR-26: days remaining until the scholarship deadline (computed, not stored). */
     private Long deadlineCountdown;
     private ApplicationStatus status;
@@ -44,6 +47,9 @@ public class ApplicationTrackerResponse {
             .scholarshipName(tracker.getScholarship().getName())
             .scholarshipProvider(tracker.getScholarship().getProvider())
             .scholarshipDeadline(tracker.getScholarship().getDeadline())
+            .imageUrl(tracker.getScholarship().getImageUrl())
+            .destinationCountry(tracker.getScholarship().getDestinationCountry())
+            .eligibleFields(tracker.getScholarship().getEligibleFields())
             .deadlineCountdown(tracker.getDeadlineCountdown())
             .status(tracker.getStatus())
             .applicationMode(tracker.getApplicationMode())

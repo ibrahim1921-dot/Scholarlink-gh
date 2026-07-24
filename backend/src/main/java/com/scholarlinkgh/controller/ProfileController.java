@@ -5,6 +5,9 @@ import com.scholarlinkgh.entity.StudentProfile;
 import com.scholarlinkgh.entity.User;
 import com.scholarlinkgh.repository.StudentProfileRepository;
 import com.scholarlinkgh.repository.UserRepository;
+import com.scholarlinkgh.repository.EligibilityCheckRepository;
+import com.scholarlinkgh.repository.ScholarshipMatchRepository;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +20,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
 import java.util.Map;
 
 /**
@@ -37,6 +44,9 @@ public class ProfileController {
 
     private final StudentProfileRepository profileRepository;
     private final UserRepository userRepository;
+    private final EligibilityCheckRepository eligibilityCheckRepository;
+    private final ScholarshipMatchRepository scholarshipMatchRepository;
+    private final Cloudinary cloudinary;
 
     /**
      * GET /api/v1/profile
@@ -63,6 +73,7 @@ public class ProfileController {
      *   country_preference, language_proficiency, financial_need, bio, achievements
      */
     @PutMapping
+    @Transactional
     public ResponseEntity<ApiResponse> updateProfile(@RequestBody Map<String, Object> body) {
         User user = getCurrentUser();
 
@@ -106,18 +117,66 @@ public class ProfileController {
         if (body.containsKey("achievements")) {
             profile.setAchievements((String) body.get("achievements"));
         }
+        if (body.containsKey("skills")) {
+            Object skillsObj = body.get("skills");
+            if (skillsObj instanceof java.util.List) {
+                java.util.List<String> skillsList = new java.util.ArrayList<>();
+                for (Object o : (java.util.List<?>) skillsObj) {
+                    skillsList.add(o.toString());
+                }
+                profile.setSkills(skillsList);
+            }
+        }
 
         // Reset profile strength score — will be recomputed on next AI match call
         profile.setProfileStrengthScore(null);
         profile.setProfileImprovementSuggestions(null);
 
         profileRepository.save(profile);
+        
+        // Invalidate stale AI caches (FR-09, FR-11) when profile updates
+        eligibilityCheckRepository.deleteAllByStudent(user);
+        scholarshipMatchRepository.deleteAllByStudent(user);
+
         log.info("Profile updated for user {}", user.getEmail());
 
         return ResponseEntity.ok(ApiResponse.builder()
             .success(true)
             .message("Profile updated successfully. Your AI match scores will be refreshed.")
             .build());
+    }
+
+    /**
+     * POST /api/v1/profile/picture
+     *
+     * Uploads and updates the student's profile picture.
+     */
+    @PostMapping("/picture")
+    public ResponseEntity<ApiResponse> uploadProfilePicture(@RequestParam("file") MultipartFile file) {
+        User user = getCurrentUser();
+        StudentProfile profile = profileRepository.findByUser(user)
+            .orElse(StudentProfile.builder().user(user).build());
+
+        try {
+            Map<String, Object> params = ObjectUtils.asMap(
+                "folder", "scholarlink/profiles/user_" + user.getId()
+            );
+            Map<?, ?> uploadResult = cloudinary.uploader().upload(file.getBytes(), params);
+            String secureUrl = (String) uploadResult.get("secure_url");
+
+            profile.setProfilePictureUrl(secureUrl);
+            profileRepository.save(profile);
+
+            return ResponseEntity.ok(ApiResponse.builder()
+                .success(true)
+                .message(secureUrl) // Passing URL back in message
+                .build());
+        } catch (Exception e) {
+            log.error("Failed to upload profile picture for user {}", user.getEmail(), e);
+            return ResponseEntity.internalServerError().body(
+                ApiResponse.builder().success(false).message("Upload failed").build()
+            );
+        }
     }
 
     /**
@@ -168,7 +227,7 @@ public class ProfileController {
         }
 
         int filledFields = 0;
-        int totalFields = 10;
+        int totalFields = 11;
         String nextStep = "/profile-setup";
 
         boolean hasEducationLevel = profile.getEducationLevel() != null && !profile.getEducationLevel().isBlank();
@@ -191,6 +250,7 @@ public class ProfileController {
 
         boolean hasBio = profile.getBio() != null && !profile.getBio().isBlank();
         boolean hasAchievements = profile.getAchievements() != null && !profile.getAchievements().isBlank();
+        boolean hasSkills = profile.getSkills() != null && !profile.getSkills().isEmpty();
 
         if (hasEducationLevel) filledFields++;
         if (hasInstitution) filledFields++;
@@ -202,6 +262,7 @@ public class ProfileController {
         if (hasLanguage) filledFields++;
         if (hasBio) filledFields++;
         if (hasAchievements) filledFields++;
+        if (hasSkills) filledFields++;
 
         if (filledFields == totalFields) {
             nextStep = "/profile-summary";

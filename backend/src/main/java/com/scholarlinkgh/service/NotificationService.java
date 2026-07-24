@@ -9,6 +9,8 @@ import com.scholarlinkgh.entity.User;
 import com.scholarlinkgh.repository.ScholarshipMatchRepository;
 import com.scholarlinkgh.repository.ScholarshipRepository;
 import com.scholarlinkgh.repository.StudentProfileRepository;
+import com.scholarlinkgh.repository.NotificationRepository;
+import com.scholarlinkgh.entity.Notification;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +50,7 @@ public class NotificationService {
     private final StudentProfileRepository studentProfileRepository;
     private final ScholarshipRepository scholarshipRepository;
     private final ScholarshipMatchRepository scholarshipMatchRepository;
+    private final NotificationRepository notificationRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private OkHttpClient httpClient;
@@ -72,13 +75,16 @@ public class NotificationService {
      * @param scholarshipId  the scholarship approaching its deadline
      * @param daysRemaining  number of days until the deadline
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public void sendDeadlineAlert(User user, Long scholarshipId, int daysRemaining) {
-        String pushToken = getPushToken(user);
-        if (pushToken == null) return;
-
         Scholarship scholarship = scholarshipRepository.findById(scholarshipId).orElse(null);
         if (scholarship == null) return;
+
+        // Deduplicate
+        java.time.LocalDateTime threshold = java.time.LocalDateTime.now().minusHours(24);
+        if (notificationRepository.existsByUserAndTypeAndRelatedScholarshipIdAndCreatedAtAfter(user, "DEADLINE_ALERT", scholarshipId, threshold)) {
+            return;
+        }
 
         String title = "⏰ Scholarship Deadline Approaching";
         String body = String.format(
@@ -88,7 +94,20 @@ public class NotificationService {
             daysRemaining == 1 ? "day" : "days"
         );
 
-        sendExpoPushNotification(pushToken, title, body, scholarshipId.toString(), "DEADLINE_ALERT");
+        Notification notification = Notification.builder()
+            .user(user)
+            .type("DEADLINE_ALERT")
+            .title(title)
+            .body(body)
+            .relatedScholarshipId(scholarshipId)
+            .build();
+        notificationRepository.save(notification);
+
+        String pushToken = getPushToken(user);
+        if (pushToken != null) {
+            sendExpoPushNotification(pushToken, title, body, scholarshipId.toString(), "DEADLINE_ALERT");
+        }
+        
         log.info("Deadline alert sent to user {} for scholarship {} ({} days)",
                  user.getEmail(), scholarshipId, daysRemaining);
     }
@@ -102,13 +121,16 @@ public class NotificationService {
      * @param user           the student to notify
      * @param scholarshipId  the newly matched scholarship
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public void sendNewMatchAlert(User user, Long scholarshipId) {
-        String pushToken = getPushToken(user);
-        if (pushToken == null) return;
-
         Scholarship scholarship = scholarshipRepository.findById(scholarshipId).orElse(null);
         if (scholarship == null) return;
+
+        // Deduplicate
+        java.time.LocalDateTime threshold = java.time.LocalDateTime.now().minusHours(24);
+        if (notificationRepository.existsByUserAndTypeAndRelatedScholarshipIdAndCreatedAtAfter(user, "NEW_MATCH", scholarshipId, threshold)) {
+            return;
+        }
 
         String title = "🎓 New Scholarship Match!";
         String body = String.format(
@@ -117,7 +139,20 @@ public class NotificationService {
             scholarship.getProvider()
         );
 
-        sendExpoPushNotification(pushToken, title, body, scholarshipId.toString(), "NEW_MATCH");
+        Notification notification = Notification.builder()
+            .user(user)
+            .type("NEW_MATCH")
+            .title(title)
+            .body(body)
+            .relatedScholarshipId(scholarshipId)
+            .build();
+        notificationRepository.save(notification);
+
+        String pushToken = getPushToken(user);
+        if (pushToken != null) {
+            sendExpoPushNotification(pushToken, title, body, scholarshipId.toString(), "NEW_MATCH");
+        }
+
         log.info("New match alert sent to user {} for scholarship {}", user.getEmail(), scholarshipId);
     }
 
@@ -131,10 +166,13 @@ public class NotificationService {
      *
      * @param user the student to notify
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public void sendWeeklyDigest(User user) {
-        String pushToken = getPushToken(user);
-        if (pushToken == null) return;
+        // Deduplicate
+        java.time.LocalDateTime threshold = java.time.LocalDateTime.now().minusDays(6);
+        if (notificationRepository.existsByUserAndTypeAndCreatedAtAfter(user, "WEEKLY_DIGEST", threshold)) {
+            return;
+        }
 
         // Count top matches
         List<?> topMatches = scholarshipMatchRepository.findByStudentOrderByMatchScoreDesc(user)
@@ -156,7 +194,19 @@ public class NotificationService {
             upcomingDeadlines
         );
 
-        sendExpoPushNotification(pushToken, title, body, null, "WEEKLY_DIGEST");
+        Notification notification = Notification.builder()
+            .user(user)
+            .type("WEEKLY_DIGEST")
+            .title(title)
+            .body(body)
+            .build();
+        notificationRepository.save(notification);
+
+        String pushToken = getPushToken(user);
+        if (pushToken != null) {
+            sendExpoPushNotification(pushToken, title, body, null, "WEEKLY_DIGEST");
+        }
+        
         log.info("Weekly digest sent to user {}", user.getEmail());
     }
 
@@ -170,10 +220,20 @@ public class NotificationService {
      * @param body             notification body text
      * @param notificationType a tag describing the notification type
      */
+    @Transactional
     public void sendCustomNotification(User user, String title, String body, String notificationType) {
+        Notification notification = Notification.builder()
+            .user(user)
+            .type(notificationType)
+            .title(title)
+            .body(body)
+            .build();
+        notificationRepository.save(notification);
+
         String pushToken = getPushToken(user);
-        if (pushToken == null) return;
-        sendExpoPushNotification(pushToken, title, body, null, notificationType);
+        if (pushToken != null) {
+            sendExpoPushNotification(pushToken, title, body, null, notificationType);
+        }
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

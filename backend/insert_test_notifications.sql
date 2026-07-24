@@ -1,0 +1,16 @@
+INSERT INTO notifications (body, created_at, is_read, title, type, user_id) VALUES
+('Your matched scholarship deadline is tomorrow!', NOW() - INTERVAL '1 hour', false, 'Deadline Approaching', 'DEADLINE_ALERT', 15),
+('New scholarship matches your profile', NOW() - INTERVAL '2 hours', false, 'New Match Found', 'NEW_MATCH', 15),
+('Weekly digest of scholarships', NOW() - INTERVAL '1 day', false, 'Weekly Digest', 'WEEKLY_DIGEST', 15),
+('Another deadline is coming up', NOW() - INTERVAL '25 hours', false, 'Deadline Approaching', 'DEADLINE_ALERT', 15),
+('Another match', NOW() - INTERVAL '2 days', false, 'New Match Found', 'NEW_MATCH', 15),
+('Yet another match', NOW() - INTERVAL '3 days', false, 'New Match Found', 'NEW_MATCH', 15),
+('Check out this new opportunity', NOW() - INTERVAL '4 days', false, 'New Match Found', 'NEW_MATCH', 15),
+('Deadline is in 7 days', NOW() - INTERVAL '5 days', false, 'Deadline Approaching', 'DEADLINE_ALERT', 15),
+('Weekly digest 2', NOW() - INTERVAL '8 days', false, 'Weekly Digest', 'WEEKLY_DIGEST', 15),
+('Weekly digest 3', NOW() - INTERVAL '15 days', false, 'Weekly Digest', 'WEEKLY_DIGEST', 15),
+('Old match 1', NOW() - INTERVAL '20 days', false, 'New Match Found', 'NEW_MATCH', 15),
+('Old match 2', NOW() - INTERVAL '21 days', false, 'New Match Found', 'NEW_MATCH', 15),
+('Old match 3', NOW() - INTERVAL '22 days', false, 'New Match Found', 'NEW_MATCH', 15),
+('Old match 4', NOW() - INTERVAL '23 days', false, 'New Match Found', 'NEW_MATCH', 15),
+('Old match 5', NOW() - INTERVAL '24 days', false, 'New Match Found', 'NEW_MATCH', 15);

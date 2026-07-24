@@ -10,6 +10,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -21,6 +23,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * JobApplication entity — tracks a student's application to a job listing.
@@ -69,6 +75,22 @@ public class JobApplication {
     /** Cover letter submitted with the application. */
     @Column(columnDefinition = "TEXT")
     private String coverLetter;
+
+    /** Mode of application (DIRECT or ASSISTED). */
+    @Column(nullable = false, length = 20)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private ApplicationMode applicationMode = ApplicationMode.ASSISTED;
+
+    /** Documents attached to the application. */
+    @ManyToMany
+    @JoinTable(
+        name = "job_application_documents",
+        joinColumns = @JoinColumn(name = "job_application_id"),
+        inverseJoinColumns = @JoinColumn(name = "document_id")
+    )
+    @Builder.Default
+    private Set<DocumentUpload> documents = new HashSet<>();
 
     /** Student's notes about this application. */
     @Column(columnDefinition = "TEXT")

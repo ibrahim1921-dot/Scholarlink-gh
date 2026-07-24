@@ -4,10 +4,13 @@ import com.scholarlinkgh.dto.ApiResponse;
 import com.scholarlinkgh.dto.EssayReviewRequest;
 import com.scholarlinkgh.dto.PersonalStatementRequest;
 import com.scholarlinkgh.dto.ScholarshipMatchResponse;
+import com.scholarlinkgh.entity.DocumentUpload;
 import com.scholarlinkgh.entity.Scholarship;
 import com.scholarlinkgh.entity.ScholarshipMatch;
 import com.scholarlinkgh.entity.User;
+import com.scholarlinkgh.repository.DocumentUploadRepository;
 import com.scholarlinkgh.repository.ScholarshipRepository;
+import com.scholarlinkgh.service.DocumentVerificationService;
 import com.scholarlinkgh.service.GeminiAIService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +47,74 @@ public class AIController {
 
     private final GeminiAIService geminiAIService;
     private final ScholarshipRepository scholarshipRepository;
+    private final DocumentUploadRepository documentUploadRepository;
+    private final DocumentVerificationService documentVerificationService;
+
+    // ── FR-xx: General AI Assistant ───────────────────────────────────────────
+
+    /**
+     * POST /api/v1/ai/ask
+     *
+     * General single-turn Q&A endpoint.
+     * Request body: { "message": "string", "document_id": number (optional) }
+     *
+     * Requires: valid JWT
+     */
+    @PostMapping("/api/v1/ai/ask")
+    public ResponseEntity<ApiResponse> askAssistant(@RequestBody java.util.Map<String, Object> body) {
+        User user = getCurrentUser();
+        String message = (String) body.getOrDefault("message", "");
+
+        if (message.isBlank()) {
+            return ResponseEntity.badRequest().body(
+                ApiResponse.builder().success(false).message("Message is required").build());
+        }
+
+        String documentText = null;
+        boolean attachmentFailed = false;
+
+        Object docIdObj = body.get("document_id");
+        if (docIdObj != null) {
+            Long documentId = null;
+            if (docIdObj instanceof Number) {
+                documentId = ((Number) docIdObj).longValue();
+            } else {
+                try {
+                    documentId = Long.parseLong(docIdObj.toString());
+                } catch (NumberFormatException e) {
+                    // Invalid format
+                }
+            }
+
+            if (documentId != null) {
+                DocumentUpload doc = documentUploadRepository.findById(documentId).orElse(null);
+                if (doc != null && doc.getStudent().getId().equals(user.getId())) {
+                    documentText = documentVerificationService.downloadAndExtractText(doc);
+                    if (documentText == null || 
+                        DocumentVerificationService.UNSUPPORTED_FORMAT_IMAGE.equals(documentText) || 
+                        DocumentVerificationService.UNSUPPORTED_FORMAT_OTHER.equals(documentText)) {
+                        attachmentFailed = true;
+                        documentText = null; // Do not pass sentinels to Gemini
+                    }
+                } else {
+                    attachmentFailed = true;
+                }
+            } else {
+                attachmentFailed = true;
+            }
+        }
+
+        String responseText = geminiAIService.askAssistant(user, message, documentText);
+
+        if (attachmentFailed) {
+            responseText = "Note: I couldn't read the attached document, so I'm answering based on your message only.\n\n" + responseText;
+        }
+
+        return ResponseEntity.ok(ApiResponse.builder()
+            .success(true)
+            .message(responseText)
+            .build());
+    }
 
     // ── FR-09: AI Scholarship Matching ───────────────────────────────────────
 

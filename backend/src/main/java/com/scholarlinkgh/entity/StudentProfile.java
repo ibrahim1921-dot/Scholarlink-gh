@@ -101,6 +101,12 @@ public class StudentProfile {
     /** Intended Start Date (e.g., "Fall 2025"). Optional. */
     private String intendedStartDate;
 
+    /** Skills that the student possesses. */
+    @jakarta.persistence.ElementCollection(fetch = jakarta.persistence.FetchType.EAGER)
+    @jakarta.persistence.CollectionTable(name = "student_skills", joinColumns = @jakarta.persistence.JoinColumn(name = "student_profile_id"))
+    @jakarta.persistence.Column(name = "skill")
+    private java.util.List<String> skills = new java.util.ArrayList<>();
+
     // ── Push notifications ──────────────────────────────────────────────────────
 
     /**
@@ -133,6 +139,9 @@ public class StudentProfile {
      * FR-41: uploads are blocked if this is null or older than 90 days.
      */
     private LocalDateTime documentDisclaimerAcceptedAt;
+
+    /** URL for the student's profile picture. */
+    private String profilePictureUrl;
 
     // ── Bio / free text ───────────────────────────────────────────────────────
 

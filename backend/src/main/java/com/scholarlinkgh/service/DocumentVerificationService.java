@@ -55,6 +55,9 @@ import org.springframework.scheduling.annotation.Async;
 @RequiredArgsConstructor
 public class DocumentVerificationService {
 
+    public static final String UNSUPPORTED_FORMAT_IMAGE = "[[UNSUPPORTED_FORMAT_IMAGE]]";
+    public static final String UNSUPPORTED_FORMAT_OTHER = "[[UNSUPPORTED_FORMAT_OTHER]]";
+
     /** Maximum upload file size in MB — sourced from .env DOCUMENT_MAX_FILE_SIZE_MB. */
     @Value("${document.max-file-size-mb:10}")
     private int maxFileSizeMb;
@@ -242,12 +245,36 @@ public class DocumentVerificationService {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     /**
+     * Downloads a document from its storage path and extracts text.
+     * @param doc the document upload entity
+     * @return extracted text, or null if it fails or is not a PDF
+     */
+    public String downloadAndExtractText(DocumentUpload doc) {
+        if (!"application/pdf".equals(doc.getMimeType())) {
+            if (doc.getMimeType() != null && doc.getMimeType().startsWith("image/")) {
+                return UNSUPPORTED_FORMAT_IMAGE;
+            }
+            return UNSUPPORTED_FORMAT_OTHER;
+        }
+        try (java.io.InputStream in = new java.net.URL(doc.getStoragePath()).openStream()) {
+            byte[] fileBytes = in.readAllBytes();
+            return extractText(fileBytes, doc.getMimeType());
+        } catch (Exception e) {
+            log.warn("Failed to download and extract text for document {}: {}", doc.getId(), e.getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Extracts plain text from a PDF using Apache PDFBox.
      * For images, returns null (image OCR not in scope for MVP).
      */
     private String extractText(byte[] fileBytes, String mimeType) {
         if (!"application/pdf".equals(mimeType)) {
-            return "[IMAGE_DOCUMENT - text extraction not available for image files]";
+            if (mimeType != null && mimeType.startsWith("image/")) {
+                return UNSUPPORTED_FORMAT_IMAGE;
+            }
+            return UNSUPPORTED_FORMAT_OTHER;
         }
         try (PDDocument document = Loader.loadPDF(fileBytes)) {
             PDFTextStripper stripper = new PDFTextStripper();

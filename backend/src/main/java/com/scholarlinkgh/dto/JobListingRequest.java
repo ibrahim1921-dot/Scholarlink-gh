@@ -1,11 +1,16 @@
 package com.scholarlinkgh.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import com.scholarlinkgh.entity.EmploymentType;
+import com.scholarlinkgh.entity.ExperienceLevel;
+import com.scholarlinkgh.entity.WorkMode;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Request DTO for creating a job listing.
@@ -28,8 +33,17 @@ public class JobListingRequest {
     private String fieldOfStudy;
     private String requiredEducationLevel;
     private Double minimumGpa;
-    private String requirements;
+    private List<String> requirements;
     private String salaryRange;
     private String applicationUrl;
+    private String imageUrl;
     private LocalDateTime applicationDeadline;
+    @NotNull(message = "Employment type is required")
+    private EmploymentType employmentType;
+
+    @NotNull(message = "Experience level is required")
+    private ExperienceLevel experienceLevel;
+
+    @NotNull(message = "Work mode is required")
+    private WorkMode workMode;
 }

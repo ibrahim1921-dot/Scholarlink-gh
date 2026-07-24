@@ -37,4 +37,11 @@ public interface EligibilityCheckRepository extends JpaRepository<EligibilityChe
         @Param("student") User student,
         @Param("scholarship") Scholarship scholarship
     );
+
+    /**
+     * Deletes all existing eligibility checks for a student — called to invalidate cache on profile update.
+     */
+    @Modifying
+    @Query("DELETE FROM EligibilityCheck e WHERE e.student = :student")
+    void deleteAllByStudent(@Param("student") User student);
 }

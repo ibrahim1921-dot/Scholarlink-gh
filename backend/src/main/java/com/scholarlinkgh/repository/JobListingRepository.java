@@ -1,6 +1,9 @@
 package com.scholarlinkgh.repository;
 
 import com.scholarlinkgh.entity.JobListing;
+import com.scholarlinkgh.entity.EmploymentType;
+import com.scholarlinkgh.entity.ExperienceLevel;
+import com.scholarlinkgh.entity.WorkMode;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -30,4 +33,17 @@ public interface JobListingRepository extends JpaRepository<JobListing, Long> {
     /** Returns all active listings for AI matching — limited to avoid huge prompts. */
     @Query("SELECT j FROM JobListing j WHERE j.active = true ORDER BY j.createdAt DESC")
     List<JobListing> findAllActive(Pageable pageable);
+
+    @Query("SELECT j FROM JobListing j WHERE j.active = true " +
+           "AND (LOWER(j.title) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(j.company) LIKE LOWER(CONCAT('%', :search, '%')) OR EXISTS (SELECT 1 FROM j.requirements req WHERE LOWER(req) LIKE LOWER(CONCAT('%', :search, '%')))) " +
+           "AND (:employmentType IS NULL OR j.employmentType = :employmentType) " +
+           "AND (:experienceLevel IS NULL OR j.experienceLevel = :experienceLevel) " +
+           "AND (:workMode IS NULL OR j.workMode = :workMode) " +
+           "ORDER BY j.createdAt DESC")
+    Page<JobListing> findJobsWithFilters(
+            @Param("search") String search,
+            @Param("employmentType") EmploymentType employmentType,
+            @Param("experienceLevel") ExperienceLevel experienceLevel,
+            @Param("workMode") WorkMode workMode,
+            Pageable pageable);
 }

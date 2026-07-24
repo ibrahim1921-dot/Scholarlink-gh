@@ -1,4 +1,5 @@
 com\scholarlinkgh\entity\EligibilityCheck.class
+com\scholarlinkgh\entity\WorkMode.class
 com\scholarlinkgh\entity\ScholarshipMatch.class
 com\scholarlinkgh\dto\ScholarshipResponse$ScholarshipResponseBuilder.class
 com\scholarlinkgh\controller\ApplicationTrackerController.class
@@ -12,6 +13,8 @@ com\scholarlinkgh\service\AuditService.class
 com\scholarlinkgh\dto\ApplicationTrackerResponse$ApplicationTrackerResponseBuilder.class
 com\scholarlinkgh\dto\JobApplicationRequest.class
 com\scholarlinkgh\controller\ScholarshipController.class
+com\scholarlinkgh\entity\EmploymentType.class
+com\scholarlinkgh\controller\NotificationController.class
 com\scholarlinkgh\entity\RefreshToken$RefreshTokenBuilder.class
 com\scholarlinkgh\repository\UserRepository.class
 com\scholarlinkgh\dto\ScholarshipRequest.class
@@ -29,10 +32,13 @@ com\scholarlinkgh\entity\SavedScholarship$SavedScholarshipBuilder.class
 com\scholarlinkgh\entity\ApplicationTracker.class
 com\scholarlinkgh\entity\StudentProfile.class
 com\scholarlinkgh\config\JwtConfig.class
+com\scholarlinkgh\config\DataBackfill.class
 com\scholarlinkgh\service\GeminiAIService.class
 com\scholarlinkgh\controller\AuthController.class
+com\scholarlinkgh\entity\SavedJob$SavedJobBuilder.class
 com\scholarlinkgh\service\RefreshTokenService.class
 com\scholarlinkgh\dto\ResetPasswordRequest.class
+com\scholarlinkgh\dto\AdminStatusUpdateRequest.class
 com\scholarlinkgh\dto\ApplicationTrackerRequest.class
 com\scholarlinkgh\repository\JobListingRepository.class
 com\scholarlinkgh\dto\ScholarshipMatchResponse$ScholarshipMatchResponseBuilder.class
@@ -41,6 +47,7 @@ com\scholarlinkgh\dto\JobListingRequest.class
 com\scholarlinkgh\service\JwtService.class
 com\scholarlinkgh\controller\DocumentController.class
 com\scholarlinkgh\service\DocumentVerificationService$VerificationResult.class
+com\scholarlinkgh\repository\SavedJobRepository.class
 com\scholarlinkgh\repository\EligibilityCheckRepository.class
 com\scholarlinkgh\service\UserActivityService.class
 com\scholarlinkgh\repository\StudentProfileRepository.class
@@ -48,6 +55,8 @@ com\scholarlinkgh\controller\AIController.class
 com\scholarlinkgh\dto\JobListingResponse$JobListingResponseBuilder.class
 com\scholarlinkgh\service\OtpService.class
 com\scholarlinkgh\dto\VerifyOtpRequest.class
+com\scholarlinkgh\controller\AdminApplicationController.class
+com\scholarlinkgh\entity\Notification$NotificationBuilder.class
 com\scholarlinkgh\security\JwtAuthFilter.class
 com\scholarlinkgh\dto\ForgotPasswordRequest.class
 com\scholarlinkgh\config\CacheConfig.class
@@ -61,6 +70,7 @@ com\scholarlinkgh\exception\ResourceNotFoundException.class
 com\scholarlinkgh\entity\Scholarship.class
 com\scholarlinkgh\entity\AuditLog.class
 com\scholarlinkgh\repository\JobApplicationRepository.class
+com\scholarlinkgh\dto\NotificationResponse.class
 com\scholarlinkgh\controller\JobController.class
 com\scholarlinkgh\entity\SavedScholarship.class
 com\scholarlinkgh\entity\ScholarshipCategory.class
@@ -68,6 +78,7 @@ com\scholarlinkgh\repository\ApplicationTrackerRepository.class
 com\scholarlinkgh\repository\AuditLogRepository.class
 com\scholarlinkgh\config\ScheduledTasks.class
 com\scholarlinkgh\dto\AuthResponse$AuthResponseBuilder.class
+com\scholarlinkgh\entity\SavedJob.class
 com\scholarlinkgh\dto\PersonalStatementRequest.class
 com\scholarlinkgh\entity\RefreshToken.class
 com\scholarlinkgh\entity\JobListing$JobListingBuilder.class
@@ -78,11 +89,14 @@ com\scholarlinkgh\entity\ApplicationTracker$ApplicationTrackerBuilder.class
 com\scholarlinkgh\dto\ScholarshipMatchResponse.class
 com\scholarlinkgh\service\ApplicationTrackerService.class
 com\scholarlinkgh\repository\ScholarshipReportRepository.class
+com\scholarlinkgh\entity\Notification.class
 com\scholarlinkgh\config\CloudinaryConfig.class
 com\scholarlinkgh\config\DataInitializer.class
 com\scholarlinkgh\config\SecurityConfig.class
 com\scholarlinkgh\service\MailService.class
+com\scholarlinkgh\entity\ExperienceLevel.class
 com\scholarlinkgh\entity\ScholarshipMatch$ScholarshipMatchBuilder.class
+com\scholarlinkgh\controller\AdminJobApplicationController.class
 com\scholarlinkgh\config\NotificationScheduler.class
 com\scholarlinkgh\service\DocumentVerificationService$1.class
 com\scholarlinkgh\dto\EssayReviewRequest.class
@@ -99,6 +113,8 @@ com\scholarlinkgh\dto\RegisterRequest.class
 com\scholarlinkgh\entity\VerificationStatus.class
 com\scholarlinkgh\repository\DocumentUploadRepository.class
 com\scholarlinkgh\dto\AuthResponse.class
+com\scholarlinkgh\dto\NotificationResponse$NotificationResponseBuilder.class
+com\scholarlinkgh\repository\NotificationRepository.class
 com\scholarlinkgh\config\GlobalExceptionHandler.class
 com\scholarlinkgh\entity\JobApplication.class
 com\scholarlinkgh\entity\ScholarshipReport$ScholarshipReportBuilder.class

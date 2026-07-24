@@ -1,10 +1,14 @@
 package com.scholarlinkgh.dto;
 
 import com.scholarlinkgh.entity.JobListing;
+import com.scholarlinkgh.entity.EmploymentType;
+import com.scholarlinkgh.entity.ExperienceLevel;
+import com.scholarlinkgh.entity.WorkMode;
 import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Response DTO for JobListing — excludes internal fields.
@@ -22,10 +26,14 @@ public class JobListingResponse {
     private String fieldOfStudy;
     private String requiredEducationLevel;
     private Double minimumGpa;
-    private String requirements;
+    private List<String> requirements;
     private String salaryRange;
     private String applicationUrl;
+    private String imageUrl;
     private LocalDateTime applicationDeadline;
+    private EmploymentType employmentType;
+    private ExperienceLevel experienceLevel;
+    private WorkMode workMode;
     private LocalDateTime createdAt;
 
     /** Maps a JobListing entity to the response DTO. */
@@ -42,7 +50,11 @@ public class JobListingResponse {
             .requirements(job.getRequirements())
             .salaryRange(job.getSalaryRange())
             .applicationUrl(job.getApplicationUrl())
+            .imageUrl(job.getImageUrl())
             .applicationDeadline(job.getApplicationDeadline())
+            .employmentType(job.getEmploymentType())
+            .experienceLevel(job.getExperienceLevel())
+            .workMode(job.getWorkMode())
             .createdAt(job.getCreatedAt())
             .build();
     }
