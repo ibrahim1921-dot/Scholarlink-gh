@@ -10,6 +10,9 @@ import com.scholarlinkgh.entity.ScholarshipStatus;
 import com.scholarlinkgh.entity.User;
 import com.scholarlinkgh.repository.ScholarshipRepository;
 import com.scholarlinkgh.repository.ScholarshipReportRepository;
+import com.scholarlinkgh.repository.ApplicationTrackerRepository;
+import com.scholarlinkgh.repository.EligibilityCheckRepository;
+import com.scholarlinkgh.repository.ScholarshipMatchRepository;
 import com.scholarlinkgh.repository.SavedScholarshipRepository;
 import com.scholarlinkgh.entity.SavedScholarship;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +53,9 @@ public class ScholarshipService {
     private final ScholarshipRepository scholarshipRepository;
     private final ScholarshipReportRepository scholarshipReportRepository;
     private final SavedScholarshipRepository savedScholarshipRepository;
+    private final ApplicationTrackerRepository applicationTrackerRepository;
+    private final EligibilityCheckRepository eligibilityCheckRepository;
+    private final ScholarshipMatchRepository scholarshipMatchRepository;
     private final AuditService auditService;
 
     // ── Student Operations ────────────────────────────────────────────────────
@@ -354,6 +360,41 @@ public class ScholarshipService {
     }
 
     /**
+     * Deletes a scholarship permanently (admin only).
+     */
+    @Transactional
+    @CacheEvict(value = {"scholarshipList", "scholarshipDetail"}, allEntries = true)
+    public ApiResponse deleteScholarship(Long id) {
+        Scholarship scholarship = scholarshipRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Scholarship not found"));
+
+        boolean hasTrackers = applicationTrackerRepository.existsByScholarship(scholarship);
+        boolean hasSaves = savedScholarshipRepository.existsByScholarship(scholarship);
+
+        if (hasTrackers || hasSaves) {
+            throw new IllegalStateException("Cannot delete: application tracker(s) or save(s) exist. Deactivate instead.");
+        }
+
+        // Clean up derived AI data and reports
+        scholarshipReportRepository.deleteAllByScholarship(scholarship);
+        eligibilityCheckRepository.deleteAllByScholarship(scholarship);
+        scholarshipMatchRepository.deleteAllByScholarship(scholarship);
+
+        scholarshipRepository.delete(scholarship);
+
+        User admin = getCurrentUser();
+        auditService.log(admin.getId(), admin.getEmail(),
+            "DELETE_SCHOLARSHIP", "Scholarship", id, scholarship.getName());
+
+        log.info("Scholarship ID {} deleted by admin {}", id, admin.getEmail());
+
+        return ApiResponse.builder()
+            .success(true)
+            .message("Scholarship has been deleted permanently.")
+            .build();
+    }
+
+    /**
      * Returns all pending (unverified) listings for admin review.
      */
     @Transactional(readOnly = true)
@@ -362,6 +403,32 @@ public class ScholarshipService {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return scholarshipRepository.findAllByVerifiedFalse(pageable)
             .map(ScholarshipResponse::from);
+    }
+
+    /**
+     * Returns all scholarships for the admin dashboard.
+     */
+    @Transactional(readOnly = true)
+    public Page<ScholarshipResponse> getAdminScholarships(String search, String category, int page, int size) {
+        size = Math.min(size, 50);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("deadline").ascending());
+
+        ScholarshipCategory categoryEnum = null;
+        if (category != null && !category.isBlank()) {
+            try {
+                categoryEnum = ScholarshipCategory.valueOf(category.toUpperCase());
+            } catch (IllegalArgumentException ex) {
+                log.warn("Invalid scholarship category filter ignored: {}", category);
+            }
+        }
+
+        Page<Scholarship> scholarships = scholarshipRepository.findAllAdminFiltered(
+            categoryEnum,
+            (search  != null && !search.isBlank())  ? "%" + search.toLowerCase() + "%" : null,
+            pageable
+        );
+
+        return scholarships.map(ScholarshipResponse::from);
     }
 
     // ── Filter Lookups ────────────────────────────────────────────────────────

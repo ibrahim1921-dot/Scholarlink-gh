@@ -1,6 +1,7 @@
 package com.scholarlinkgh.controller;
 
 import com.scholarlinkgh.dto.AdminStatusUpdateRequest;
+import com.scholarlinkgh.dto.JobApplicationResponse;
 import com.scholarlinkgh.entity.JobApplication;
 import com.scholarlinkgh.service.JobService;
 import jakarta.validation.Valid;
@@ -33,11 +34,20 @@ public class AdminJobApplicationController {
      */
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<JobApplication> updateJobApplicationStatus(
+    public ResponseEntity<JobApplicationResponse> updateJobApplicationStatus(
             @PathVariable Long id,
             @Valid @RequestBody AdminStatusUpdateRequest request) {
         
-        JobApplication response = jobService.updateStatusByAdmin(id, request.getStatus());
+        JobApplicationResponse response = jobService.updateStatusByAdmin(id, request.getStatus());
         return ResponseEntity.ok(response);
+    }
+
+    @org.springframework.web.bind.annotation.GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<org.springframework.data.domain.Page<com.scholarlinkgh.dto.JobApplicationResponse>> getJobApplications(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) com.scholarlinkgh.entity.ApplicationStatus status,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(jobService.getAdminJobApplications(status, page, size));
     }
 }

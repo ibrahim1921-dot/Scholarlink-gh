@@ -1,6 +1,7 @@
 com\scholarlinkgh\entity\EligibilityCheck.class
 com\scholarlinkgh\entity\WorkMode.class
 com\scholarlinkgh\entity\ScholarshipMatch.class
+com\scholarlinkgh\controller\AuditController.class
 com\scholarlinkgh\dto\ScholarshipResponse$ScholarshipResponseBuilder.class
 com\scholarlinkgh\controller\ApplicationTrackerController.class
 com\scholarlinkgh\dto\LoginRequest.class
@@ -22,6 +23,7 @@ com\scholarlinkgh\entity\ScholarshipStatus.class
 com\scholarlinkgh\entity\StudentProfile$StudentProfileBuilder.class
 com\scholarlinkgh\entity\DocumentType.class
 com\scholarlinkgh\entity\DocumentUpload$DocumentUploadBuilder.class
+com\scholarlinkgh\service\AdminUserService.class
 com\scholarlinkgh\dto\ScholarshipResponse.class
 com\scholarlinkgh\dto\ApplicationTrackerResponse.class
 com\scholarlinkgh\service\DocumentVerificationService.class
@@ -67,6 +69,7 @@ com\scholarlinkgh\entity\DocumentUpload.class
 com\scholarlinkgh\entity\Scholarship$ScholarshipBuilder.class
 com\scholarlinkgh\entity\ScholarshipReport.class
 com\scholarlinkgh\exception\ResourceNotFoundException.class
+com\scholarlinkgh\dto\UserResponse$UserResponseBuilder.class
 com\scholarlinkgh\entity\Scholarship.class
 com\scholarlinkgh\entity\AuditLog.class
 com\scholarlinkgh\repository\JobApplicationRepository.class
@@ -113,8 +116,12 @@ com\scholarlinkgh\dto\RegisterRequest.class
 com\scholarlinkgh\entity\VerificationStatus.class
 com\scholarlinkgh\repository\DocumentUploadRepository.class
 com\scholarlinkgh\dto\AuthResponse.class
+com\scholarlinkgh\dto\JobApplicationResponse$JobApplicationResponseBuilder.class
 com\scholarlinkgh\dto\NotificationResponse$NotificationResponseBuilder.class
+com\scholarlinkgh\dto\UserResponse.class
+com\scholarlinkgh\controller\AdminUserController.class
 com\scholarlinkgh\repository\NotificationRepository.class
 com\scholarlinkgh\config\GlobalExceptionHandler.class
 com\scholarlinkgh\entity\JobApplication.class
 com\scholarlinkgh\entity\ScholarshipReport$ScholarshipReportBuilder.class
+com\scholarlinkgh\dto\JobApplicationResponse.class

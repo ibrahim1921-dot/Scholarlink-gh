@@ -1,5 +1,7 @@
 package com.scholarlinkgh.repository;
 
+import com.scholarlinkgh.entity.User;
+
 import com.scholarlinkgh.entity.JobListing;
 import com.scholarlinkgh.entity.EmploymentType;
 import com.scholarlinkgh.entity.ExperienceLevel;
@@ -46,4 +48,18 @@ public interface JobListingRepository extends JpaRepository<JobListing, Long> {
             @Param("experienceLevel") ExperienceLevel experienceLevel,
             @Param("workMode") WorkMode workMode,
             Pageable pageable);
+
+    @Query("SELECT j FROM JobListing j WHERE " +
+           "(LOWER(j.title) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(j.company) LIKE LOWER(CONCAT('%', :search, '%')) OR EXISTS (SELECT 1 FROM j.requirements req WHERE LOWER(req) LIKE LOWER(CONCAT('%', :search, '%')))) " +
+           "AND (:employmentType IS NULL OR j.employmentType = :employmentType) " +
+           "AND (:experienceLevel IS NULL OR j.experienceLevel = :experienceLevel) " +
+           "AND (:workMode IS NULL OR j.workMode = :workMode) " +
+           "ORDER BY j.createdAt DESC")
+    Page<JobListing> findAllJobsWithFilters(
+            @Param("search") String search,
+            @Param("employmentType") EmploymentType employmentType,
+            @Param("experienceLevel") ExperienceLevel experienceLevel,
+            @Param("workMode") WorkMode workMode,
+            Pageable pageable);
+    long countByCreatedBy(User user);
 }

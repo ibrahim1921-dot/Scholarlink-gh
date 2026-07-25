@@ -15,10 +15,13 @@ public interface SavedScholarshipRepository extends JpaRepository<SavedScholarsh
 
     boolean existsByStudentAndScholarship(User student, Scholarship scholarship);
 
+    boolean existsByScholarship(Scholarship scholarship);
+
     Optional<SavedScholarship> findByStudentAndScholarship(User student, Scholarship scholarship);
 
     List<SavedScholarship> findAllByStudentOrderBySavedAtDesc(User student);
 
     @Modifying
     void deleteByStudentAndScholarship(User student, Scholarship scholarship);
+    long countByStudent(User student);
 }

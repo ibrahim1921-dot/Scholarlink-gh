@@ -44,6 +44,7 @@ public class ScholarshipResponse {
     private boolean allowsAssistedApplication;
     private Double assistedApplicationFee;
     private boolean verified;
+    private boolean active;
     private Integer reportCount;
     private LocalDateTime createdAt;
 
@@ -86,6 +87,7 @@ public class ScholarshipResponse {
             .allowsAssistedApplication(scholarship.isAllowsAssistedApplication())
             .assistedApplicationFee(scholarship.getAssistedApplicationFee())
             .verified(scholarship.isVerified())
+            .active(scholarship.isActive())
             .reportCount(scholarship.getReportCount())
             .createdAt(scholarship.getCreatedAt())
             .build();

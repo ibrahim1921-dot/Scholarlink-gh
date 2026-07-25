@@ -223,6 +223,28 @@ public class ScholarshipController {
     }
 
     /**
+     * DELETE /api/v1/scholarships/{id}
+     * Deletes a scholarship listing permanently.
+     * Blocked if applications/saves exist.
+     *
+     * Requires: ROLE_ADMIN
+     */
+    @org.springframework.web.bind.annotation.DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> deleteScholarship(
+            @PathVariable Long id) {
+        try {
+            ApiResponse response = scholarshipService.deleteScholarship(id);
+            return ResponseEntity.ok(response);
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.builder().success(false).message(ex.getMessage()).build());
+        } catch (RuntimeException ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    /**
      * GET /api/v1/scholarships/admin/pending
      * Returns all unverified scholarship listings.
      *
@@ -236,5 +258,21 @@ public class ScholarshipController {
         Page<ScholarshipResponse> pending =
             scholarshipService.getPendingScholarships(page, size);
         return ResponseEntity.ok(pending);
+    }
+
+    /**
+     * GET /api/v1/scholarships/admin/all
+     * Returns all scholarship listings for admin dashboard.
+     *
+     * Requires: ROLE_ADMIN
+     */
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<ScholarshipResponse>> getAdminScholarships(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(scholarshipService.getAdminScholarships(search, category, page, size));
     }
 }

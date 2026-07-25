@@ -34,6 +34,7 @@ public class JobListingResponse {
     private EmploymentType employmentType;
     private ExperienceLevel experienceLevel;
     private WorkMode workMode;
+    private boolean active;
     private LocalDateTime createdAt;
 
     /** Maps a JobListing entity to the response DTO. */
@@ -55,6 +56,7 @@ public class JobListingResponse {
             .employmentType(job.getEmploymentType())
             .experienceLevel(job.getExperienceLevel())
             .workMode(job.getWorkMode())
+            .active(job.isActive())
             .createdAt(job.getCreatedAt())
             .build();
     }

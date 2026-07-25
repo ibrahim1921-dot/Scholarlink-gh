@@ -10,8 +10,10 @@ C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\sc
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\config\SecurityConfig.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\controller\AdminApplicationController.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\controller\AdminJobApplicationController.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\controller\AdminUserController.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\controller\AIController.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\controller\ApplicationTrackerController.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\controller\AuditController.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\controller\AuthController.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\controller\DocumentController.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\controller\JobController.java
@@ -26,6 +28,7 @@ C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\sc
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\EssayReviewRequest.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\ForgotPasswordRequest.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\JobApplicationRequest.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\JobApplicationResponse.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\JobListingRequest.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\JobListingResponse.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\LoginRequest.java
@@ -37,6 +40,7 @@ C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\sc
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\ScholarshipMatchResponse.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\ScholarshipRequest.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\ScholarshipResponse.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\UserResponse.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\dto\VerifyOtpRequest.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ApplicationMode.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\entity\ApplicationStatus.java
@@ -81,6 +85,7 @@ C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\sc
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\repository\UserRepository.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\security\JwtAuthFilter.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\security\RateLimitFilter.java
+C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\service\AdminUserService.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\service\ApplicationTrackerService.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\service\AuditService.java
 C:\Users\Administrator\OneDrive\Desktop\Scholarlink\backend\src\main\java\com\scholarlinkgh\service\AuthService.java

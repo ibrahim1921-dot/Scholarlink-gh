@@ -1,5 +1,7 @@
 package com.scholarlinkgh.repository;
 
+import com.scholarlinkgh.entity.User;
+
 import com.scholarlinkgh.entity.Scholarship;
 import com.scholarlinkgh.entity.ScholarshipCategory;
 import com.scholarlinkgh.entity.ScholarshipStatus;
@@ -114,4 +116,24 @@ public interface ScholarshipRepository extends JpaRepository<Scholarship, Long> 
         AND s.eligibleFields IS NOT NULL
     """)
     List<String> findDistinctEligibleFields();
+
+    /**
+     * Returns all scholarships without verified/active filters for admin dashboard.
+     */
+    @Query("""
+        SELECT s FROM Scholarship s
+        WHERE (:#{#category} IS NULL OR s.category = :category)
+        AND (:search IS NULL OR (
+            LOWER(s.name) LIKE :search
+            OR LOWER(s.provider) LIKE :search
+            OR LOWER(s.eligibleFields) LIKE :search
+        ))
+        ORDER BY s.deadline ASC
+    """)
+    Page<Scholarship> findAllAdminFiltered(
+        @Param("category") ScholarshipCategory category,
+        @Param("search") String search,
+        Pageable pageable
+    );
+    long countByCreatedBy(User user);
 }

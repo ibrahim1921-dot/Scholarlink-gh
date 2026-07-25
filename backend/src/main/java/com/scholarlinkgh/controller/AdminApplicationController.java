@@ -42,4 +42,13 @@ public class AdminApplicationController {
         ApplicationTrackerResponse response = applicationTrackerService.updateStatusByAdmin(id, request.getStatus());
         return ResponseEntity.ok(response);
     }
+
+    @org.springframework.web.bind.annotation.GetMapping("/scholarship-applications")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<org.springframework.data.domain.Page<ApplicationTrackerResponse>> getScholarshipApplications(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) com.scholarlinkgh.entity.ApplicationStatus status,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(applicationTrackerService.getAdminApplications(status, page, size));
+    }
 }

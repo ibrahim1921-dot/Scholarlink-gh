@@ -59,6 +59,53 @@ public class JobController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping("/admin/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<JobListingResponse>> getAdminJobs(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) EmploymentType employmentType,
+            @RequestParam(required = false) ExperienceLevel experienceLevel,
+            @RequestParam(required = false) WorkMode workMode,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(jobService.getAdminJobs(search, employmentType, experienceLevel, workMode, page, size));
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<JobListingResponse> updateJob(
+            @PathVariable Long id,
+            @Valid @RequestBody JobListingRequest request) {
+        try {
+            return ResponseEntity.ok(jobService.updateJob(id, request));
+        } catch (com.scholarlinkgh.exception.ResourceNotFoundException ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/{id}/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> deactivateJob(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(jobService.deactivateJob(id));
+        } catch (com.scholarlinkgh.exception.ResourceNotFoundException ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> deleteJob(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(jobService.deleteJob(id));
+        } catch (com.scholarlinkgh.exception.ResourceNotFoundException ex) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.builder().success(false).message(ex.getMessage()).build());
+        }
+    }
+
     // ── Student Endpoints ─────────────────────────────────────────────────────
 
     /**

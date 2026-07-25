@@ -159,6 +159,13 @@ public class ApplicationTrackerService {
         return ApplicationTrackerResponse.from(updated);
     }
 
+    @Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<ApplicationTrackerResponse> getAdminApplications(ApplicationStatus status, int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, Math.min(size, 50));
+        return trackerRepository.findWithFilters(status, pageable)
+            .map(ApplicationTrackerResponse::from);
+    }
+
     /**
      * Deletes a tracker. Only the owning student can delete their tracker.
      */

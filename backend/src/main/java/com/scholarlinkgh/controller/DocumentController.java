@@ -172,14 +172,20 @@ public class DocumentController {
         List<DocumentUpload> docs = documentUploadRepository.findByStudentOrderByUploadedAtDesc(user);
 
         List<Map<String, Object>> response = docs.stream()
-            .map(d -> Map.<String, Object>of(
-                "id", d.getId(),
-                "filename", d.getFilename(),
-                "document_type", d.getDocumentType(),
-                "verification_status", d.getVerificationStatus(),
-                "verification_notes", d.getVerificationNotes() != null ? d.getVerificationNotes() : "",
-                "uploaded_at", d.getUploadedAt().toString()
-            ))
+            .map(d -> {
+                VerificationStatus displayStatus = (!d.isAdminReviewed() && (d.getVerificationStatus() == VerificationStatus.SUSPICIOUS || d.getVerificationStatus() == VerificationStatus.REJECTED))
+                    ? VerificationStatus.PENDING : d.getVerificationStatus();
+                String displayNotes = d.isAdminReviewed() ? (d.getVerificationNotes() != null ? d.getVerificationNotes() : "") : "";
+
+                return Map.<String, Object>of(
+                    "id", d.getId(),
+                    "filename", d.getFilename(),
+                    "document_type", d.getDocumentType(),
+                    "verification_status", displayStatus,
+                    "verification_notes", displayNotes,
+                    "uploaded_at", d.getUploadedAt().toString()
+                );
+            })
             .toList();
 
         return ResponseEntity.ok(response);
@@ -199,12 +205,16 @@ public class DocumentController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         }
 
+        VerificationStatus displayStatus = (!doc.isAdminReviewed() && (doc.getVerificationStatus() == VerificationStatus.SUSPICIOUS || doc.getVerificationStatus() == VerificationStatus.REJECTED))
+            ? VerificationStatus.PENDING : doc.getVerificationStatus();
+        String displayNotes = doc.isAdminReviewed() ? (doc.getVerificationNotes() != null ? doc.getVerificationNotes() : "") : "";
+
         return ResponseEntity.ok(Map.of(
             "id", doc.getId(),
             "filename", doc.getFilename(),
             "document_type", doc.getDocumentType(),
-            "verification_status", doc.getVerificationStatus(),
-            "verification_notes", doc.getVerificationNotes() != null ? doc.getVerificationNotes() : "",
+            "verification_status", displayStatus,
+            "verification_notes", displayNotes,
             "uploaded_at", doc.getUploadedAt().toString()
         ));
     }
@@ -245,6 +255,7 @@ public class DocumentController {
      */
     @GetMapping("/admin/suspicious")
     @PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getSuspiciousDocuments() {
         List<DocumentUpload> docs =
             documentUploadRepository.findByVerificationStatusOrderByUploadedAtAsc(VerificationStatus.SUSPICIOUS);
@@ -261,6 +272,103 @@ public class DocumentController {
             .toList();
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/v1/documents/admin/documents
+     *
+     * Exhaustive list of all documents with filtering for admin view.
+     */
+    @GetMapping("/admin/documents")
+    @PreAuthorize("hasRole('ADMIN')")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ResponseEntity<org.springframework.data.domain.Page<Map<String, Object>>> getAllDocuments(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String type,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        
+        VerificationStatus verificationStatus = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                verificationStatus = VerificationStatus.valueOf(status.toUpperCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
+        
+        DocumentType documentType = null;
+        if (type != null && !type.isBlank()) {
+            try {
+                documentType = DocumentType.valueOf(type.toUpperCase());
+            } catch (IllegalArgumentException ignored) {}
+        }
+
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            page, size, org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "uploadedAt")
+        );
+
+        org.springframework.data.domain.Page<DocumentUpload> docs = documentUploadRepository.searchDocuments(
+                (search != null && !search.isBlank()) ? search : null,
+                verificationStatus, documentType, pageable);
+
+        org.springframework.data.domain.Page<Map<String, Object>> response = docs.map(d -> Map.<String, Object>of(
+            "id", d.getId(),
+            "student_email", d.getStudent().getEmail(),
+            "filename", d.getFilename(),
+            "document_type", d.getDocumentType(),
+            "verification_status", d.getVerificationStatus(),
+            "verification_notes", d.getVerificationNotes() != null ? d.getVerificationNotes() : "",
+            "uploaded_at", d.getUploadedAt().toString()
+        ));
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * GET /api/v1/documents/admin/documents/{id}/download
+     *
+     * Proxy endpoint to download the raw document file securely.
+     */
+    @GetMapping("/admin/documents/{id}/download")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadDocument(@PathVariable Long id) {
+        DocumentUpload doc = documentUploadRepository.findById(id).orElse(null);
+        if (doc == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            
+            // Set 10 second timeout
+            org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+            requestFactory.setConnectTimeout(10000);
+            requestFactory.setReadTimeout(10000);
+            restTemplate.setRequestFactory(requestFactory);
+
+            ResponseEntity<org.springframework.core.io.Resource> response = restTemplate.getForEntity(doc.getStoragePath(), org.springframework.core.io.Resource.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.add(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + doc.getFilename() + "\"");
+                
+                String mimeType = doc.getMimeType();
+                if (mimeType != null && !mimeType.isBlank()) {
+                    headers.setContentType(org.springframework.http.MediaType.parseMediaType(mimeType));
+                } else {
+                    headers.setContentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+                }
+                
+                return ResponseEntity.ok()
+                        .headers(headers)
+                        .body(response.getBody());
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+            }
+        } catch (org.springframework.web.client.RestClientException e) {
+            log.error("Failed to proxy document download for id {}: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+        }
     }
 
     /**
@@ -292,6 +400,8 @@ public class DocumentController {
         doc.setVerificationStatus(newStatus);
         doc.setVerificationNotes(body.getOrDefault("notes", doc.getVerificationNotes()));
         doc.setVerifiedAt(java.time.LocalDateTime.now());
+        doc.setAdminReviewed(true);
+        doc.setReviewedBy(getCurrentUser());
         documentUploadRepository.save(doc);
 
         log.info("Admin updated document {} status to {}", id, newStatus);

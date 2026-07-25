@@ -41,9 +41,17 @@ public interface ScholarshipMatchRepository extends JpaRepository<ScholarshipMat
     void deleteAllByStudent(@Param("student") User student);
 
     /**
+     * Deletes all matches for a specific scholarship — called before deleting a scholarship.
+     */
+    @Modifying
+    @Query("DELETE FROM ScholarshipMatch m WHERE m.scholarship = :scholarship")
+    void deleteAllByScholarship(@Param("scholarship") com.scholarlinkgh.entity.Scholarship scholarship);
+
+    /**
      * Deletes match records older than a cutoff to keep the table clean.
      */
     @Modifying
     @Query("DELETE FROM ScholarshipMatch m WHERE m.createdAt < :cutoff")
     void deleteOlderThan(@Param("cutoff") LocalDateTime cutoff);
+    void deleteAllByStudent(User student);
 }

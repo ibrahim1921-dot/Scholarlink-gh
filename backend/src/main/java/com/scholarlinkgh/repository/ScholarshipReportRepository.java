@@ -12,4 +12,7 @@ public interface ScholarshipReportRepository extends JpaRepository<ScholarshipRe
     boolean existsByScholarshipAndReporter(Scholarship scholarship, User reporter);
 
     long countByScholarship(Scholarship scholarship);
+
+    void deleteAllByScholarship(Scholarship scholarship);
+    long countByReporter(User reporter);
 }

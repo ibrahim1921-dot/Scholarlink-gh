@@ -29,6 +29,9 @@ public interface ApplicationTrackerRepository extends JpaRepository<ApplicationT
     /** Checks whether a student is already tracking a scholarship. */
     boolean existsByStudentAndScholarship(User student, Scholarship scholarship);
 
+    /** Checks whether ANY tracker exists for a specific scholarship (used before deletion). */
+    boolean existsByScholarship(Scholarship scholarship);
+
     /**
      * Returns all active trackers for scholarships whose deadline falls
      * between today and {@code deadlineCutoff} (inclusive).
@@ -58,4 +61,13 @@ public interface ApplicationTrackerRepository extends JpaRepository<ApplicationT
         @Param("student") User student,
         @Param("status") ApplicationStatus status
     );
+
+    @Query("SELECT t FROM ApplicationTracker t WHERE " +
+           "(:status IS NULL OR t.status = :status) " +
+           "ORDER BY t.createdAt DESC")
+    org.springframework.data.domain.Page<ApplicationTracker> findWithFilters(
+        @Param("status") ApplicationStatus status,
+        org.springframework.data.domain.Pageable pageable
+    );
+    long countByStudent(User student);
 }

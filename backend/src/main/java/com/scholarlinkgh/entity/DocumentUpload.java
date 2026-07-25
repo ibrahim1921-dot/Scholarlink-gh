@@ -124,6 +124,21 @@ public class DocumentUpload {
      */
     private LocalDateTime verifiedAt;
 
+    /**
+     * Whether an admin has reviewed this document.
+     * True means the current status/notes are authoritative admin decisions.
+     */
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean adminReviewed = false;
+
+    /**
+     * The admin user who reviewed this document.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reviewed_by_admin_id")
+    private User reviewedBy;
+
     @PrePersist
     protected void onCreate() {
         uploadedAt = LocalDateTime.now();

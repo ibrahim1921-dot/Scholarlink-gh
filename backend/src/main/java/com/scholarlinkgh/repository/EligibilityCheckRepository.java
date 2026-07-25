@@ -44,4 +44,12 @@ public interface EligibilityCheckRepository extends JpaRepository<EligibilityChe
     @Modifying
     @Query("DELETE FROM EligibilityCheck e WHERE e.student = :student")
     void deleteAllByStudent(@Param("student") User student);
+
+    /**
+     * Deletes all existing eligibility checks for a scholarship — called before deleting a scholarship.
+     */
+    @Modifying
+    @Query("DELETE FROM EligibilityCheck e WHERE e.scholarship = :scholarship")
+    void deleteAllByScholarship(@Param("scholarship") Scholarship scholarship);
+    void deleteAllByStudent(User student);
 }
