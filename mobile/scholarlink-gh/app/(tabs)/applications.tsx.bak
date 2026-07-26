@@ -1,0 +1,755 @@
+import { useState } from "react";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FlatList, StyleSheet, Text, View, Pressable, ScrollView, Platform, ImageBackground } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
+import { useQuery } from "@tanstack/react-query";
+import { useTrackers } from "../../hooks/useTracker";
+import { useJobApplications } from "../../hooks/useJob";
+
+import { Screen } from "../../components/Screen";
+import { BaseScholarshipCard } from "../../components/BaseScholarshipCard";
+import {
+  EmptyState,
+  ErrorState,
+  LoadingState,
+} from "../../components/StateView";
+import { UserAvatar } from "../../components/UserAvatar";
+import { colors } from "../../constants/colors";
+import { documentService } from "../../services/documentService";
+import { ApplicationTracker, JobApplication, UnifiedApplication } from "../../types/api";
+import { getCountdownLabel, formatDeadline } from "../../utils/date";
+
+type TabKey = 'in-progress' | 'submitted' | 'interview' | 'awarded' | 'rejected';
+type TypeFilter = 'all' | 'scholarships' | 'jobs';
+
+export default function ApplicationsScreen() {
+  const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState<TabKey>('in-progress');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  
+  const { data: trackers = [], isLoading: loadingTrackers, error: errorTrackers, refetch: fetchTrackers } = useTrackers();
+  const { data: jobApps = [], isLoading: loadingJobs, error: errorJobs, refetch: fetchJobs } = useJobApplications();
+  const { data: documents = [] } = useQuery({
+    queryKey: ['documents'],
+    queryFn: () => documentService.getDocuments()
+  });
+
+  const loading = loadingTrackers || loadingJobs;
+  const error = errorTrackers || errorJobs;
+
+  const fetchAll = () => {
+    fetchTrackers();
+    fetchJobs();
+  };
+
+  // Merge into UnifiedApplication array
+  const unifiedApplications: UnifiedApplication[] = [
+    ...trackers.map((t): UnifiedApplication => ({
+      type: 'scholarship',
+      id: t.id,
+      title: t.scholarshipName || `Scholarship #${t.scholarshipId}`,
+      provider: t.scholarshipProvider || 'Provider unknown',
+      status: t.status,
+      deadline: t.scholarshipDeadline,
+      updatedAt: t.updatedAt,
+      linkId: t.scholarshipId,
+      imageUrl: t.imageUrl,
+      destinationCountry: t.destinationCountry,
+      eligibleFields: t.eligibleFields,
+      deadlineCountdown: t.deadlineCountdown,
+      originalData: t,
+    })),
+    ...jobApps.map((j): UnifiedApplication => ({
+      type: 'job',
+      id: j.id,
+      title: j.job.title,
+      provider: j.job.company,
+      status: j.status,
+      deadline: j.job.applicationDeadline,
+      updatedAt: j.updatedAt,
+      linkId: j.job.id,
+      imageUrl: j.job.imageUrl,
+      destinationCountry: j.job.location,
+      eligibleFields: j.job.fieldOfStudy,
+      deadlineCountdown: undefined,
+      originalData: j,
+    })),
+  ].sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+
+  const getFilteredApps = () => {
+    return unifiedApplications.filter((app) => {
+      // 1. Type filter
+      if (typeFilter === 'scholarships' && app.type !== 'scholarship') return false;
+      if (typeFilter === 'jobs' && app.type !== 'job') return false;
+
+      // 2. Status filter
+      const status = app.status || "RESEARCHING";
+      switch (activeTab) {
+        case 'in-progress':
+          return status === 'RESEARCHING' || status === 'IN_PROGRESS';
+        case 'submitted':
+          return status === 'SUBMITTED';
+        case 'interview':
+          return status === 'INTERVIEW';
+        case 'awarded':
+          return status === 'AWARDED';
+        case 'rejected':
+          return status === 'REJECTED';
+        default:
+          return false;
+      }
+    });
+  };
+
+  const getProgress = (status: string) => {
+    let base = 0;
+    switch(status) {
+      case 'RESEARCHING': base = 10; break;
+      case 'IN_PROGRESS': base = 30; break;
+      case 'SUBMITTED': base = 60; break;
+      case 'INTERVIEW': base = 80; break;
+      case 'AWARDED': case 'REJECTED': base = 100; break;
+    }
+    
+    if (base === 100) return 100;
+    
+    const verifiedCount = documents.filter(d => d.verification_status === 'VERIFIED').length;
+    let bonus = 0;
+    if (verifiedCount === 1) bonus = 10;
+    if (verifiedCount >= 2) bonus = 20;
+    
+    return Math.min(100, base + bonus);
+  };
+
+  const getStatusText = (status: string, type: 'job' | 'scholarship') => {
+    switch(status) {
+      case 'RESEARCHING': return type === 'job' ? 'Draft' : 'Researching';
+      case 'IN_PROGRESS': return 'In Progress';
+      case 'SUBMITTED': return 'Submitted';
+      case 'INTERVIEW': return 'Interview';
+      case 'AWARDED': return type === 'job' ? 'Offer' : 'Awarded';
+      case 'REJECTED': return 'Rejected';
+      default: return 'Draft';
+    }
+  };
+
+  const getStatusColor = (status: ApplicationTracker['status']) => {
+    switch (status) {
+      case 'SUBMITTED': return { bg: '#d5e3ff', text: '#001b3c' };
+      case 'IN_PROGRESS': return { bg: '#ffdbca', text: '#341100' };
+      case 'AWARDED': return { bg: '#a3f69c', text: '#002204' };
+      case 'INTERVIEW': return { bg: '#e8e8ed', text: '#1a1c1f' };
+      case 'REJECTED': return { bg: '#ffdad6', text: '#93000a' };
+      default: return { bg: '#f4f3f8', text: '#43474f' };
+    }
+  };
+
+  if (loading && unifiedApplications.length === 0) return <Screen scroll={false}><LoadingState /></Screen>;
+  if (error && unifiedApplications.length === 0) return <Screen scroll={false}><ErrorState message={(error as Error)?.message || "Failed to load"} onRetry={fetchAll} /></Screen>;
+
+  const filtered = getFilteredApps();
+
+  return (
+    <View style={styles.container}>
+      {/* Top App Bar */}
+      <ImageBackground
+        source={require("../../assets/images/header-applications.jpg")}
+        style={[styles.header, { paddingTop: insets.top + 10 }]}
+        imageStyle={{ resizeMode: "cover" }}
+      >
+        <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.primary, opacity: 0.65 }]} />
+        <View style={styles.headerLeft}>
+          <Text style={[styles.headerTitle, { color: '#ffffff' }]}>Application Tracker</Text>
+        </View>
+        <UserAvatar size={32} style={[styles.avatar, { borderColor: '#ffffff', borderWidth: 1 }]} />
+      </ImageBackground>
+
+      {/* Type Filter */}
+      <View style={styles.typeFilterWrapper}>
+        <View style={styles.typeFilterContainer}>
+          {(['all', 'scholarships', 'jobs'] as TypeFilter[]).map(type => (
+            <Pressable 
+              key={type} 
+              style={[styles.typePill, typeFilter === type && styles.typePillActive]} 
+              onPress={() => setTypeFilter(type)}
+            >
+              <Text style={[styles.typePillText, typeFilter === type && styles.typePillTextActive]}>
+                {type === 'all' ? 'All' : type.charAt(0).toUpperCase() + type.slice(1)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* Tab Navigation */}
+      <View style={styles.tabBarWrapper}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabBar}>
+          {(['in-progress', 'submitted', 'interview', 'awarded', 'rejected'] as TabKey[]).map(tab => (
+            <Pressable key={tab} style={styles.tabBtn} onPress={() => setActiveTab(tab)}>
+              <Text style={[styles.tabBtnText, activeTab === tab && styles.tabBtnTextActive]}>
+                {tab === 'in-progress' ? 'In Progress' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
+              {activeTab === tab && <View style={styles.activeTabIndicator} />}
+            </Pressable>
+          ))}
+        </ScrollView>
+      </View>
+
+      {/* Content */}
+      <ScrollView contentContainerStyle={styles.contentContainer} showsVerticalScrollIndicator={false}>
+        {filtered.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Ionicons name="folder-open-outline" size={48} color={colors.muted} style={{ marginBottom: 8 }} />
+            <Text style={styles.emptyTitle}>Nothing here yet</Text>
+            <Text style={styles.emptyText}>Explore jobs and scholarships to add to this list.</Text>
+          </View>
+        ) : (
+          filtered.map(app => {
+            const status = app.status || "DRAFT";
+            const countdownLabel = app.deadlineCountdown !== undefined ? getCountdownLabel(app.deadlineCountdown) : undefined;
+            const statusColor = getStatusColor(status);
+            
+            // Type Badge
+            const typeBadge = (
+              <View style={[styles.typeBadge, { backgroundColor: app.type === 'job' ? '#e0f2fe' : '#f3e8ff' }]}>
+                <Ionicons name={app.type === 'job' ? 'briefcase' : 'school'} size={12} color={app.type === 'job' ? '#0369a1' : '#7e22ce'} />
+                <Text style={[styles.typeBadgeText, { color: app.type === 'job' ? '#0369a1' : '#7e22ce' }]}>
+                  {app.type === 'job' ? 'Job' : 'Scholarship'}
+                </Text>
+              </View>
+            );
+
+            const statusBadge = (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {typeBadge}
+                <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
+                  <Text style={[styles.statusBadgeText, { color: statusColor.text }]}>
+                    {getStatusText(status, app.type).toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+            );
+
+            const progressContent = (
+              <View style={styles.progressContainer}>
+                <View style={styles.progressTextRow}>
+                  <Text style={styles.progressPercent}>{getStatusText(status, app.type)}</Text>
+                </View>
+                <View style={styles.progressBarBg}>
+                  <View style={[styles.progressBarFill, { width: `${getProgress(status)}%`, backgroundColor: status === 'REJECTED' ? '#ba1a1a' : (status === 'AWARDED' ? '#1b6d24' : '#003366') }]} />
+                </View>
+              </View>
+            );
+
+            const routeTarget = app.type === 'job' ? `/job-application/${app.id}` : `/application/${app.id}`;
+
+            let actionContent = null;
+            if (activeTab === 'awarded') {
+              actionContent = (
+                <>
+                  <View style={styles.congratsBanner}>
+                    <Text style={styles.congratsEmoji}>🎉</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.congratsTitle}>Congratulations!</Text>
+                      <Text style={styles.congratsText}>You {app.type === 'job' ? 'received an offer for this job' : 'were awarded this scholarship'}.</Text>
+                    </View>
+                  </View>
+                  {progressContent}
+                  <Pressable style={styles.btnPrimary} onPress={() => router.push(routeTarget)}>
+                    <Text style={styles.btnPrimaryText}>Next Steps</Text>
+                  </Pressable>
+                </>
+              );
+            } else if (activeTab === 'interview') {
+              actionContent = (
+                <>
+                  {progressContent}
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <Pressable style={[styles.btnPrimary, { flex: 1, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#003366' }]} onPress={() => router.push(routeTarget)}>
+                      <Text style={[styles.btnPrimaryText, { color: '#003366' }]}>View Progress</Text>
+                    </Pressable>
+                    <Pressable style={[styles.btnPrimary, { flex: 1, backgroundColor: '#003366' }]} onPress={() => router.push("/ai-essay")}>
+                      <Ionicons name="hardware-chip" size={20} color="#ffffff" />
+                      <Text style={styles.btnPrimaryText}>AI Coach</Text>
+                    </Pressable>
+                  </View>
+                </>
+              );
+            } else if (activeTab === 'submitted' || activeTab === 'rejected') {
+              actionContent = (
+                <>
+                  <View style={styles.submittedDateBox}>
+                    <Ionicons name="calendar-outline" size={18} color={colors.muted} style={{ marginRight: 8 }} />
+                    <Text style={styles.submittedDateText}>
+                      {status === 'REJECTED' 
+                        ? (app.updatedAt ? `Rejected: ${formatDeadline(app.updatedAt)}` : 'Recently updated')
+                        : (app.originalData.submittedAt ? `Submitted: ${formatDeadline(app.originalData.submittedAt)}` : (app.originalData.appliedAt ? `Applied: ${formatDeadline(app.originalData.appliedAt)}` : 'Recently updated'))}
+                    </Text>
+                  </View>
+                  {progressContent}
+                  <Pressable style={styles.viewDetailsBtn} onPress={() => router.push(routeTarget)}>
+                    <Text style={styles.viewDetailsText}>View Progress</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#003366" />
+                  </Pressable>
+                </>
+              );
+            } else {
+              // In Progress
+              actionContent = (
+                <>
+                  {progressContent}
+                  <Pressable style={styles.btnPrimary} onPress={() => router.push(routeTarget)}>
+                    <Ionicons name="analytics" size={18} color="#ffffff" style={{ marginRight: 8 }} />
+                    <Text style={styles.btnPrimaryText}>View Progress</Text>
+                  </Pressable>
+                </>
+              );
+            }
+
+            return (
+              <BaseScholarshipCard
+                key={`${app.type}-${app.id}`}
+                title={app.title}
+                provider={app.provider}
+                deadline={app.deadline ? formatDeadline(app.deadline) : undefined}
+                imageUrl={app.imageUrl}
+                country={app.destinationCountry}
+                field={app.eligibleFields}
+                countdownLabel={countdownLabel}
+                statusBadge={statusBadge}
+                onPress={() => router.push(routeTarget as any)}
+              >
+                {actionContent}
+              </BaseScholarshipCard>
+            );
+          })
+        )}
+
+        {/* Dynamic Empty Content Placeholder */}
+        {activeTab === 'in-progress' && filtered.length > 0 && (
+          <View style={styles.discoverCard}>
+            <Ionicons name="compass" size={64} color="rgba(0, 51, 102, 0.4)" style={{ marginBottom: 8 }} />
+            <Text style={styles.discoverTitle}>Discover New Opportunities</Text>
+            <Text style={styles.discoverSubtitle}>Based on your profile, we found new matches for you.</Text>
+            <Pressable style={styles.exploreBtn} onPress={() => router.push('/(tabs)/scholarships?filter=matches')}>
+              <Text style={styles.exploreBtnText}>Explore matches</Text>
+              <Ionicons name="arrow-forward" size={16} color="#003366" />
+            </Pressable>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingBottom: 10,
+    backgroundColor: "rgba(249, 249, 254, 0.85)", // glass-header effect
+    zIndex: 40,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(195, 198, 209, 0.3)",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  headerTitle: {
+    fontFamily: "PlusJakartaSans_700Bold",
+    fontSize: 20,
+    color: colors.primary,
+  },
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "#003366",
+  },
+  typeFilterWrapper: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    backgroundColor: colors.background,
+    zIndex: 30,
+  },
+  typeFilterContainer: {
+    flexDirection: 'row',
+    backgroundColor: 'rgba(226, 226, 231, 0.4)',
+    borderRadius: 8,
+    padding: 4,
+  },
+  typePill: {
+    flex: 1,
+    paddingVertical: 6,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  typePillActive: {
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  typePillText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13,
+    color: colors.muted,
+  },
+  typePillTextActive: {
+    color: colors.primary,
+  },
+  tabBarWrapper: {
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(195, 198, 209, 0.2)",
+    zIndex: 30,
+  },
+  tabBar: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    gap: 12,
+  },
+  tabBtn: {
+    position: "relative",
+    paddingBottom: 8,
+    paddingHorizontal: 8,
+  },
+  tabBtnText: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 16,
+    color: "rgba(67, 71, 79, 0.6)", // on-surface-variant/60
+  },
+  tabBtnTextActive: {
+    color: colors.primary,
+  },
+  activeTabIndicator: {
+    position: "absolute",
+    bottom: -1,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: "#003366",
+    borderRadius: 99,
+  },
+  contentContainer: {
+    padding: 20,
+    paddingBottom: 120, // Room for bottom tabs
+  },
+  card: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "rgba(195, 198, 209, 0.3)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  cardHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  cardHeaderLeft: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  cardTitle: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 18,
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontFamily: "BeVietnamPro_400Regular",
+    fontSize: 14,
+    color: colors.muted,
+  },
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "transparent",
+  },
+  badgeText: {
+    fontFamily: "BeVietnamPro_600SemiBold",
+    fontSize: 12,
+  },
+  progressContainer: {
+    marginTop: 16,
+    marginBottom: 24,
+  },
+  progressTextRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  progressPercent: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 14,
+    color: colors.primary,
+  },
+  progressBarBg: {
+    height: 8,
+    backgroundColor: "#e2e2e7",
+    borderRadius: 4,
+    overflow: "hidden",
+  },
+  progressBarFill: {
+    height: "100%",
+    backgroundColor: "#003366",
+    borderRadius: 4,
+  },
+  btnPrimary: {
+    height: 48,
+    backgroundColor: "#001e40", // primary
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  btnPrimaryText: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 16,
+    color: "#ffffff",
+  },
+  submittedDateBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: "rgba(195, 198, 209, 0.2)",
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  submittedDateText: {
+    fontFamily: "BeVietnamPro_400Regular",
+    fontSize: 14,
+    color: colors.muted,
+  },
+  viewDetailsBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  viewDetailsText: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 16,
+    color: "#003366",
+  },
+  interviewDetailsBox: {
+    backgroundColor: "#eeedf2", // surface-container
+    padding: 16,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    marginTop: 16,
+    marginBottom: 16,
+  },
+  interviewDateBox: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: "rgba(195, 198, 209, 0.4)",
+  },
+  interviewDateMonth: {
+    fontFamily: "PlusJakartaSans_700Bold",
+    fontSize: 12,
+    color: "#ba1a1a",
+    textTransform: "uppercase",
+  },
+  interviewDateDay: {
+    fontFamily: "PlusJakartaSans_700Bold",
+    fontSize: 24,
+    color: colors.primary,
+  },
+  interviewTimeText: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 14,
+    color: colors.primary,
+  },
+  interviewViaText: {
+    fontFamily: "BeVietnamPro_400Regular",
+    fontSize: 12,
+    color: colors.muted,
+  },
+  awardedCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: "#a0f399", // secondary-container
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    elevation: 2,
+    marginBottom: 16,
+  },
+  awardedCardHeader: {
+    backgroundColor: "rgba(160, 243, 153, 0.1)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  awardedBadge: {
+    backgroundColor: "#1b6d24", // secondary
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  awardedBadgeText: {
+    fontFamily: "BeVietnamPro_600SemiBold",
+    fontSize: 12,
+    color: "#ffffff",
+  },
+  awardedCardBody: {
+    padding: 16,
+  },
+  awardedAmountBox: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(226, 226, 231, 0.3)", // surface-variant/30
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    marginTop: 16,
+  },
+  awardedAmountLabel: {
+    fontFamily: "BeVietnamPro_600SemiBold",
+    fontSize: 10,
+    color: colors.muted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  awardedAmountText: {
+    fontFamily: "PlusJakartaSans_800ExtraBold",
+    fontSize: 24,
+    color: "#1b6d24", // secondary
+  },
+  discoverCard: {
+    marginTop: 24,
+    padding: 20,
+    borderRadius: 16,
+    backgroundColor: "#f4f3f8", // surface-container-low
+    borderWidth: 1,
+    borderColor: "rgba(195, 198, 209, 0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+    textAlign: "center",
+  },
+  discoverTitle: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 18,
+    color: colors.primary,
+    marginBottom: 4,
+    textAlign: "center",
+  },
+  discoverSubtitle: {
+    fontFamily: "BeVietnamPro_400Regular",
+    fontSize: 14,
+    color: colors.muted,
+    textAlign: "center",
+    maxWidth: 280,
+    marginBottom: 16,
+  },
+  exploreBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  exploreBtnText: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 14,
+    color: "#003366",
+  },
+  emptyCard: {
+    padding: 40,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(195, 198, 209, 0.5)",
+    borderStyle: "dashed",
+    borderRadius: 16,
+    marginTop: 24,
+  },
+  emptyTitle: {
+    fontFamily: "PlusJakartaSans_600SemiBold",
+    fontSize: 18,
+    color: colors.primary,
+    marginBottom: 4,
+  },
+  emptyText: {
+    fontFamily: "BeVietnamPro_400Regular",
+    fontSize: 14,
+    color: colors.muted,
+    textAlign: "center",
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  statusBadgeText: {
+    fontFamily: "BeVietnamPro_600SemiBold",
+    fontSize: 11,
+  },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  typeBadgeText: {
+    fontFamily: "BeVietnamPro_600SemiBold",
+    fontSize: 11,
+  },
+  congratsBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(163, 246, 156, 0.2)",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  congratsEmoji: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  congratsTitle: {
+    fontFamily: "PlusJakartaSans_700Bold",
+    fontSize: 14,
+    color: "#002204",
+  },
+  congratsText: {
+    fontFamily: "BeVietnamPro_400Regular",
+    fontSize: 12,
+    color: "#1b6d24",
+  },
+});
