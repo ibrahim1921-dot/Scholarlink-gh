@@ -34,6 +34,7 @@ public class ApplicationTrackerService {
 
     private final ApplicationTrackerRepository trackerRepository;
     private final ScholarshipRepository scholarshipRepository;
+    private final NotificationService notificationService;
 
     // ── CRUD ──────────────────────────────────────────────────────────────────
 
@@ -138,8 +139,12 @@ public class ApplicationTrackerService {
         ApplicationTracker tracker = trackerRepository.findById(trackerId)
             .orElseThrow(() -> new RuntimeException("Tracker not found"));
 
-        if (status != null) {
+        ApplicationStatus oldStatus = tracker.getStatus();
+        boolean statusChanged = false;
+
+        if (status != null && status != oldStatus) {
             tracker.setStatus(status);
+            statusChanged = true;
 
             // Mark submitted_at when transitioning to SUBMITTED
             if (status == ApplicationStatus.SUBMITTED && tracker.getSubmittedAt() == null) {
@@ -155,6 +160,15 @@ public class ApplicationTrackerService {
         ApplicationTracker updated = trackerRepository.save(tracker);
         User admin = getCurrentUser();
         log.info("Admin {} updated tracker {} to status {}", admin.getEmail(), trackerId, updated.getStatus());
+
+        if (statusChanged) {
+            String title = "🎓 Application Update";
+            String scholarshipName = tracker.getScholarship() != null && tracker.getScholarship().getName() != null
+                ? tracker.getScholarship().getName() : "Scholarship #" + tracker.getScholarship().getId();
+            String displayStatus = formatScholarshipStatus(status);
+            String bodyMsg = String.format("Your application for %s has moved to %s.", scholarshipName, displayStatus);
+            notificationService.sendCustomNotification(tracker.getStudent(), title, bodyMsg, "APPLICATION_UPDATE");
+        }
 
         return ApplicationTrackerResponse.from(updated);
     }
@@ -189,5 +203,17 @@ public class ApplicationTrackerService {
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (User) auth.getPrincipal();
+    }
+
+    private String formatScholarshipStatus(ApplicationStatus status) {
+        return switch (status) {
+            case IN_PROGRESS -> "In Progress";
+            case SUBMITTED -> "Submitted";
+            case INTERVIEW -> "Interview";
+            case AWARDED -> "Awarded";
+            case REJECTED -> "Rejected";
+            case RESEARCHING -> "Researching";
+            default -> "Updated";
+        };
     }
 }

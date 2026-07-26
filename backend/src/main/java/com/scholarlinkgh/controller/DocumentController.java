@@ -51,6 +51,7 @@ public class DocumentController {
     private final DocumentVerificationService verificationService;
     private final DocumentUploadRepository documentUploadRepository;
     private final UserRepository userRepository;
+    private final com.scholarlinkgh.service.NotificationService notificationService;
 
     // ── FR-41: Disclaimer ─────────────────────────────────────────────────────
 
@@ -397,12 +398,28 @@ public class DocumentController {
                     .message("Invalid status. Use: VERIFIED, SUSPICIOUS, REJECTED").build());
         }
 
+        boolean wasAlreadyReviewed = doc.isAdminReviewed();
+
         doc.setVerificationStatus(newStatus);
         doc.setVerificationNotes(body.getOrDefault("notes", doc.getVerificationNotes()));
         doc.setVerifiedAt(java.time.LocalDateTime.now());
         doc.setAdminReviewed(true);
         doc.setReviewedBy(getCurrentUser());
         documentUploadRepository.save(doc);
+
+        if (!wasAlreadyReviewed && (newStatus == VerificationStatus.VERIFIED || newStatus == VerificationStatus.REJECTED)) {
+            String title = "📄 Document " + (newStatus == VerificationStatus.VERIFIED ? "Verified" : "Rejected");
+            String note = doc.getVerificationNotes() != null && !doc.getVerificationNotes().isBlank() 
+                ? "\n\nNote: " + doc.getVerificationNotes() : "";
+            
+            String prettyType = doc.getDocumentType().toString().replace("_", " ").toLowerCase();
+            String bodyMsg = String.format("Your %s has been %s.%s", 
+                prettyType, 
+                newStatus == VerificationStatus.VERIFIED ? "verified" : "rejected",
+                note);
+            
+            notificationService.sendCustomNotification(doc.getStudent(), title, bodyMsg, "DOCUMENT_REVIEW");
+        }
 
         log.info("Admin updated document {} status to {}", id, newStatus);
         return ResponseEntity.ok(ApiResponse.builder().success(true)

@@ -12,6 +12,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import com.scholarlinkgh.exception.ResourceNotFoundException;
 
 
@@ -119,6 +120,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(Map.of(
                 "success", false,
                 "message", "Required part '" + ex.getRequestPartName() + "' is missing."
+        ));
+    }
+
+    /**
+     * Malformed JSON or type mismatch (e.g., string to enum conversion failure).
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex) {
+
+        log.warn("Malformed JSON or type mismatch: {}", ex.getMessage());
+        return ResponseEntity.badRequest().body(Map.of(
+                "success", false,
+                "message", "Invalid request format or value provided."
         ));
     }
 

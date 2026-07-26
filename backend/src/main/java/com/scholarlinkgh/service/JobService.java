@@ -57,6 +57,7 @@ public class JobService {
     private final DocumentUploadRepository documentUploadRepository;
     private final GeminiAIService geminiAIService;
     private final AuditService auditService;
+    private final NotificationService notificationService;
 
     // ── Admin Operations ──────────────────────────────────────────────────────
 
@@ -388,13 +389,28 @@ public class JobService {
         JobApplication application = jobApplicationRepository.findById(applicationId)
             .orElseThrow(() -> new ResourceNotFoundException("Job application not found"));
 
-        if (status != null) {
+        ApplicationStatus oldStatus = application.getStatus();
+        boolean statusChanged = false;
+
+        if (status != null && status != oldStatus) {
             application.setStatus(status);
+            statusChanged = true;
         }
 
         JobApplication updated = jobApplicationRepository.save(application);
         User admin = getCurrentUser();
         log.info("Admin {} updated job application {} to status {}", admin.getEmail(), applicationId, updated.getStatus());
+
+        if (statusChanged) {
+            String title = "💼 Job Application Update";
+            String jobTitle = application.getJob() != null && application.getJob().getTitle() != null
+                ? application.getJob().getTitle() : "Job";
+            String company = application.getJob() != null && application.getJob().getCompany() != null
+                ? application.getJob().getCompany() : "Company";
+            String displayStatus = formatJobStatus(status);
+            String bodyMsg = String.format("Your application for %s at %s has moved to %s.", jobTitle, company, displayStatus);
+            notificationService.sendCustomNotification(application.getStudent(), title, bodyMsg, "APPLICATION_UPDATE");
+        }
 
         return JobApplicationResponse.from(updated);
     }
@@ -402,5 +418,17 @@ public class JobService {
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return (User) auth.getPrincipal();
+    }
+
+    private String formatJobStatus(ApplicationStatus status) {
+        return switch (status) {
+            case IN_PROGRESS -> "In Progress";
+            case SUBMITTED -> "Submitted";
+            case INTERVIEW -> "Interview";
+            case AWARDED -> "Offer";
+            case REJECTED -> "Rejected";
+            case RESEARCHING -> "Researching";
+            default -> "Updated";
+        };
     }
 }

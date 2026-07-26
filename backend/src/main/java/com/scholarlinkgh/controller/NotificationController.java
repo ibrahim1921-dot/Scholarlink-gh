@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -82,6 +83,40 @@ public class NotificationController {
         return ResponseEntity.ok(ApiResponse.builder()
             .success(true)
             .message("All notifications marked as read")
+            .build());
+    }
+
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<ApiResponse> deleteNotification(@PathVariable Long id) {
+        User user = getCurrentUser();
+        
+        Notification notification = notificationRepository.findById(id).orElse(null);
+        if (notification == null || !notification.getUser().getId().equals(user.getId())) {
+            return ResponseEntity.status(403).body(ApiResponse.builder()
+                .success(false)
+                .message("Notification not found or access denied")
+                .build());
+        }
+        
+        notificationRepository.delete(notification);
+        
+        return ResponseEntity.ok(ApiResponse.builder()
+            .success(true)
+            .message("Notification deleted")
+            .build());
+    }
+
+    @DeleteMapping
+    @Transactional
+    public ResponseEntity<ApiResponse> deleteAllNotifications() {
+        User user = getCurrentUser();
+        
+        notificationRepository.deleteAllByUser(user);
+        
+        return ResponseEntity.ok(ApiResponse.builder()
+            .success(true)
+            .message("All notifications deleted")
             .build());
     }
 
