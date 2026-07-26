@@ -157,6 +157,35 @@ public class AuthController {
     }
 
     /**
+     * POST /api/v1/auth/logout-all-devices
+     * Requires: valid JWT access token.
+     * Revokes all server-side refresh tokens for the current user across all devices.
+     */
+    @PostMapping("/logout-all-devices")
+    public ResponseEntity<ApiResponse> logoutAllDevices(
+            @AuthenticationPrincipal User user) {
+
+        ApiResponse response = authService.logout(user);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * POST /api/v1/auth/change-password
+     * Requires: valid JWT access token.
+     * Changes the user's password and revokes all active sessions.
+     */
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse> changePassword(
+            @AuthenticationPrincipal User user,
+            @Valid @RequestBody com.scholarlinkgh.dto.ChangePasswordRequest request) {
+
+        ApiResponse response = authService.changePassword(user, request);
+        return response.isSuccess()
+            ? ResponseEntity.ok(response)
+            : ResponseEntity.badRequest().body(response);
+    }
+
+    /**
      * POST /api/v1/auth/forgot-password
      * FR-07: sends a password reset link to the email if it exists.
      * Always returns success to prevent account enumeration (OWASP A07).

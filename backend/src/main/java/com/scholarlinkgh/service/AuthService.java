@@ -355,6 +355,33 @@ public class AuthService {
     // ── Resend OTP ────────────────────────────────────────────────────────────
 
     /**
+     * Changes the user's password if the current password is correct.
+     */
+    @Transactional
+    public ApiResponse changePassword(User user, com.scholarlinkgh.dto.ChangePasswordRequest request) {
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            log.warn("Password change failed: incorrect current password for {}", user.getEmail());
+            return ApiResponse.builder()
+                .success(false)
+                .message("Incorrect current password.")
+                .build();
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        // Revoke all existing refresh tokens — force fresh login everywhere (security best practice)
+        refreshTokenService.revokeAll(user);
+
+        log.info("Password changed successfully for: {}", user.getEmail());
+
+        return ApiResponse.builder()
+            .success(true)
+            .message("Password changed successfully. Please log in with your new password.")
+            .build();
+    }
+
+    /**
      * Resends OTP for unverified accounts. Rate limiting on /verify-otp
      * path in RateLimitFilter applies here.
      *

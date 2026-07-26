@@ -53,5 +53,4 @@ public interface ScholarshipMatchRepository extends JpaRepository<ScholarshipMat
     @Modifying
     @Query("DELETE FROM ScholarshipMatch m WHERE m.createdAt < :cutoff")
     void deleteOlderThan(@Param("cutoff") LocalDateTime cutoff);
-    void deleteAllByStudent(User student);
 }
