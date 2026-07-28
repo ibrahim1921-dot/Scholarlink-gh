@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { useTable, useCustomMutation, useInvalidate } from "@refinedev/core";
+import axios from "axios";
+import { API_URL } from "@/providers/authProvider";
 import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, Edit, Plus, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Edit, Plus, Trash2, CheckCircle, XCircle, Download, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +40,35 @@ export const ScholarshipList: React.FC = () => {
   const [actionScholarship, setActionScholarship] = useState<any>(null);
   const [actionType, setActionType] = useState<"deactivate" | "verify" | "delete" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<number | null>(null);
+
+  const handleExport = async (id: number, name: string) => {
+    setExportingId(id);
+    try {
+      const token = localStorage.getItem("scholarlink_admin_token");
+      const response = await axios.get(
+        `${API_URL}/admin/scholarships/${id}/applications/export`,
+        {
+          responseType: "blob",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const blob = new Blob([response.data], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `scholarship_${name.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_applicants.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export scholarship applications", err);
+      alert("Failed to export applications. Please try again.");
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   const { mutate } = useCustomMutation();
   const invalidate = useInvalidate();
@@ -142,6 +173,21 @@ export const ScholarshipList: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExport(scholarship.id, scholarship.name)}
+                        disabled={exportingId === scholarship.id}
+                        className="mr-2"
+                        title="Export applicant summary CSV"
+                      >
+                        {exportingId === scholarship.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4 mr-1" />
+                        )}
+                        Export
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

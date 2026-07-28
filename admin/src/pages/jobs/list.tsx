@@ -1,11 +1,13 @@
 import React, { useState } from "react";
 import { useTable, useCustomMutation, useInvalidate } from "@refinedev/core";
+import axios from "axios";
+import { API_URL } from "@/providers/authProvider";
 import { useNavigate } from "react-router-dom";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, Edit, Plus, Trash2, XCircle } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Edit, Plus, Trash2, XCircle, Download, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +40,35 @@ export const JobList: React.FC = () => {
   const [actionJob, setActionJob] = useState<any>(null);
   const [actionType, setActionType] = useState<"deactivate" | "delete" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<number | null>(null);
+
+  const handleExport = async (id: number, title: string) => {
+    setExportingId(id);
+    try {
+      const token = localStorage.getItem("scholarlink_admin_token");
+      const response = await axios.get(
+        `${API_URL}/admin/jobs/${id}/applications/export`,
+        {
+          responseType: "blob",
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const blob = new Blob([response.data], { type: "text/csv" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `job_${title.toLowerCase().replace(/[^a-z0-9]+/g, "_")}_applicants.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to export job applications", err);
+      alert("Failed to export applications. Please try again.");
+    } finally {
+      setExportingId(null);
+    }
+  };
 
   const { mutate } = useCustomMutation();
   const invalidate = useInvalidate();
@@ -140,6 +171,21 @@ export const JobList: React.FC = () => {
                       )}
                     </TableCell>
                     <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleExport(job.id, job.title)}
+                        disabled={exportingId === job.id}
+                        className="mr-2"
+                        title="Export applicant summary CSV"
+                      >
+                        {exportingId === job.id ? (
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        ) : (
+                          <Download className="h-4 w-4 mr-1" />
+                        )}
+                        Export
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
