@@ -36,6 +36,8 @@ export const ScholarshipEdit: React.FC = () => {
     status: "OPEN",
     allowsAssistedApplication: false,
     assistedApplicationFee: "",
+    sponsored: false,
+    sponsorName: "",
   });
 
   useEffect(() => {
@@ -57,6 +59,8 @@ export const ScholarshipEdit: React.FC = () => {
         status: scholarshipData.status || "OPEN",
         allowsAssistedApplication: scholarshipData.allowsAssistedApplication || false,
         assistedApplicationFee: scholarshipData.assistedApplicationFee !== null ? String(scholarshipData.assistedApplicationFee) : "",
+        sponsored: scholarshipData.sponsored || false,
+        sponsorName: scholarshipData.sponsorName || "",
       });
     }
   }, [scholarshipData]);
@@ -190,34 +194,62 @@ export const ScholarshipEdit: React.FC = () => {
             <Textarea id="selectionCriteria" name="selectionCriteria" value={formData.selectionCriteria} onChange={handleChange} rows={3} />
           </div>
 
-          <div className="space-y-2 border-t pt-6">
-            <div className="flex flex-col space-y-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="allowsAssistedApplication"
-                  name="allowsAssistedApplication"
-                  checked={formData.allowsAssistedApplication}
-                  onChange={handleChange}
-                  className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
-                />
-                <Label htmlFor="allowsAssistedApplication">Allows Assisted Application</Label>
-              </div>
-              {formData.allowsAssistedApplication && (
-                <div className="space-y-2">
-                  <Label htmlFor="assistedApplicationFee">Assisted Application Fee ($)</Label>
-                  <Input
-                    id="assistedApplicationFee"
-                    name="assistedApplicationFee"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={formData.assistedApplicationFee}
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-semibold text-primary">Assisted Application & Sponsorship</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="allowsAssistedApplication"
+                    name="allowsAssistedApplication"
+                    checked={formData.allowsAssistedApplication}
                     onChange={handleChange}
-                    className="max-w-xs"
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
                   />
+                  <Label htmlFor="allowsAssistedApplication">Allows Assisted Application</Label>
                 </div>
-              )}
+                {formData.allowsAssistedApplication && !formData.sponsored && (
+                  <div className="space-y-2">
+                    <Label htmlFor="assistedApplicationFee">Assisted Application Fee (₵)</Label>
+                    <Input
+                      id="assistedApplicationFee"
+                      name="assistedApplicationFee"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.assistedApplicationFee}
+                      onChange={handleChange}
+                      className="max-w-xs"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="sponsored"
+                    name="sponsored"
+                    checked={formData.sponsored}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="sponsored">Sponsored (Free to Apply)</Label>
+                </div>
+                {formData.sponsored && (
+                  <div className="space-y-2">
+                    <Label htmlFor="sponsorName">Sponsor Name</Label>
+                    <Input
+                      id="sponsorName"
+                      name="sponsorName"
+                      value={formData.sponsorName}
+                      onChange={handleChange}
+                      className="max-w-xs"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

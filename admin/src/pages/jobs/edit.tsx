@@ -34,6 +34,10 @@ export const JobEdit: React.FC = () => {
     employmentType: "FULL_TIME",
     experienceLevel: "ENTRY_LEVEL",
     workMode: "ON_SITE",
+    allowsAssistedApplication: true,
+    assistedApplicationFee: "",
+    sponsored: false,
+    sponsorName: "",
   });
 
   const [requirements, setRequirements] = useState<string[]>([]);
@@ -56,14 +60,23 @@ export const JobEdit: React.FC = () => {
         employmentType: jobData.employmentType || "FULL_TIME",
         experienceLevel: jobData.experienceLevel || "ENTRY_LEVEL",
         workMode: jobData.workMode || "ON_SITE",
+        allowsAssistedApplication: jobData.allowsAssistedApplication ?? true,
+        assistedApplicationFee: jobData.assistedApplicationFee !== null ? String(jobData.assistedApplicationFee) : "",
+        sponsored: jobData.sponsored || false,
+        sponsorName: jobData.sponsorName || "",
       });
       setRequirements(jobData.requirements || []);
     }
   }, [jobData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    if (type === "checkbox") {
+      const target = e.target as HTMLInputElement;
+      setFormData((prev) => ({ ...prev, [name]: target.checked }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const addRequirement = () => {
@@ -82,6 +95,7 @@ export const JobEdit: React.FC = () => {
     onFinish({
       ...formData,
       minimumGpa: formData.minimumGpa ? parseFloat(formData.minimumGpa) : null,
+      assistedApplicationFee: formData.assistedApplicationFee ? parseFloat(formData.assistedApplicationFee) : null,
       requirements,
       applicationDeadline: formData.applicationDeadline ? new Date(formData.applicationDeadline).toISOString() : null,
     });
@@ -208,6 +222,65 @@ export const JobEdit: React.FC = () => {
             <div className="space-y-2">
               <Label htmlFor="applicationDeadline">Application Deadline</Label>
               <Input id="applicationDeadline" name="applicationDeadline" type="datetime-local" value={formData.applicationDeadline} onChange={handleChange} />
+            </div>
+          </div>
+
+          <div className="space-y-4 border-t pt-6">
+            <h3 className="text-lg font-semibold text-primary">Assisted Application & Sponsorship</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="allowsAssistedApplication"
+                    name="allowsAssistedApplication"
+                    checked={formData.allowsAssistedApplication}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="allowsAssistedApplication">Allows Assisted Application</Label>
+                </div>
+                {formData.allowsAssistedApplication && !formData.sponsored && (
+                  <div className="space-y-2">
+                    <Label htmlFor="assistedApplicationFee">Assisted Application Fee (₵)</Label>
+                    <Input
+                      id="assistedApplicationFee"
+                      name="assistedApplicationFee"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.assistedApplicationFee}
+                      onChange={handleChange}
+                      className="max-w-xs"
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="sponsored"
+                    name="sponsored"
+                    checked={formData.sponsored}
+                    onChange={handleChange}
+                    className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="sponsored">Sponsored (Free to Apply)</Label>
+                </div>
+                {formData.sponsored && (
+                  <div className="space-y-2">
+                    <Label htmlFor="sponsorName">Sponsor Name</Label>
+                    <Input
+                      id="sponsorName"
+                      name="sponsorName"
+                      value={formData.sponsorName}
+                      onChange={handleChange}
+                      className="max-w-xs"
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

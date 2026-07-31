@@ -35,6 +35,10 @@ public class JobListingResponse {
     private ExperienceLevel experienceLevel;
     private WorkMode workMode;
     private boolean active;
+    private boolean allowsAssistedApplication;
+    private Double assistedApplicationFee;
+    private boolean sponsored;
+    private String sponsorName;
     private LocalDateTime createdAt;
 
     /** Maps a JobListing entity to the response DTO. */
@@ -57,6 +61,10 @@ public class JobListingResponse {
             .experienceLevel(job.getExperienceLevel())
             .workMode(job.getWorkMode())
             .active(job.isActive())
+            .allowsAssistedApplication(job.isAllowsAssistedApplication())
+            .assistedApplicationFee(job.getAssistedApplicationFee())
+            .sponsored(job.isSponsored())
+            .sponsorName(job.getSponsorName())
             .createdAt(job.getCreatedAt())
             .build();
     }

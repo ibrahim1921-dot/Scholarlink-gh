@@ -95,6 +95,7 @@ public class GeminiAIService {
     private final ScholarshipMatchRepository scholarshipMatchRepository;
     private final StudentProfileRepository studentProfileRepository;
     private final EligibilityCheckRepository eligibilityCheckRepository;
+    private final AiCreditService aiCreditService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // Built in @PostConstruct after @Value fields are injected
@@ -104,11 +105,13 @@ public class GeminiAIService {
             ScholarshipRepository scholarshipRepository,
             ScholarshipMatchRepository scholarshipMatchRepository,
             StudentProfileRepository studentProfileRepository,
-            EligibilityCheckRepository eligibilityCheckRepository) {
+            EligibilityCheckRepository eligibilityCheckRepository,
+            AiCreditService aiCreditService) {
         this.scholarshipRepository = scholarshipRepository;
         this.scholarshipMatchRepository = scholarshipMatchRepository;
         this.studentProfileRepository = studentProfileRepository;
         this.eligibilityCheckRepository = eligibilityCheckRepository;
+        this.aiCreditService = aiCreditService;
     }
 
     @PostConstruct
@@ -163,11 +166,7 @@ public class GeminiAIService {
 
         String prompt = buildMatchingPrompt(profile, scholarships);
         String rawResponse = callGemini(prompt);
-
-        if (rawResponse == null) {
-            log.error("Gemini API returned null for scholarship matching");
-            return List.of();
-        }
+        aiCreditService.consumeCredit(user);
 
         List<ScholarshipMatch> matches = parseMatchingResponse(rawResponse, user, scholarships);
 
@@ -215,11 +214,7 @@ public class GeminiAIService {
         log.info("Calling Gemini for eligibility check: user={}, scholarship={}", user.getEmail(), scholarship.getId());
         log.info("ACTUAL PROMPT TEXT SENT TO GEMINI:\n{}", prompt);
         String rawResponse = callGemini(prompt);
-
-        if (rawResponse == null) {
-            log.error("Gemini returned null for eligibility check: user={}, scholarship={}", user.getEmail(), scholarship.getId());
-            return buildErrorJson("Unable to check eligibility at this time. Please try again.");
-        }
+        aiCreditService.consumeCredit(user);
 
         log.debug("Gemini eligibility raw response: {}", rawResponse);
         String jsonBlock = extractJsonBlock(rawResponse);
@@ -264,8 +259,7 @@ public class GeminiAIService {
         }
 
         String prompt = buildPersonalStatementPrompt(profile, scholarship, keyPoints);
-        String rawResponse = callGemini(prompt);
-        return rawResponse != null ? rawResponse : "Unable to generate personal statement. Please try again.";
+        return callGemini(prompt);
     }
 
     // ── FR-20: Essay Review & Scoring ─────────────────────────────────────────
@@ -280,9 +274,6 @@ public class GeminiAIService {
     public String reviewEssay(String essayText, Scholarship scholarship) {
         String prompt = buildEssayReviewPrompt(essayText, scholarship);
         String rawResponse = callGemini(prompt);
-        if (rawResponse == null) {
-            return buildErrorJson("Unable to review essay at this time. Please try again.");
-        }
         return extractJsonBlock(rawResponse);
     }
 
@@ -317,10 +308,8 @@ public class GeminiAIService {
             }
             """, statementText);
 
-        String rawResponse = callGemini(prompt);
-        if (rawResponse == null) return false;
-
         try {
+            String rawResponse = callGemini(prompt);
             String jsonBlock = extractJsonBlock(rawResponse);
             JsonNode node = objectMapper.readTree(jsonBlock);
             return node.path("is_too_generic").asBoolean(false);
@@ -346,9 +335,7 @@ public class GeminiAIService {
         }
 
         String prompt = buildJobMatchingPrompt(profile, jobs);
-        String rawResponse = callGemini(prompt);
-        return rawResponse != null ? rawResponse
-            : buildErrorJson("Unable to match jobs at this time. Please try again.");
+        return callGemini(prompt);
     }
 
     // ── FR-45: AI CV Generator ────────────────────────────────────────────────
@@ -410,8 +397,7 @@ public class GeminiAIService {
             orNA(profile.getAchievements())
         );
 
-        String rawResponse = callGemini(prompt);
-        return rawResponse != null ? rawResponse : "Unable to generate CV at this time. Please try again.";
+        return callGemini(prompt);
     }
 
     /**
@@ -479,8 +465,7 @@ public class GeminiAIService {
             orNA(profile.getAchievements())
         );
 
-        String rawResponse = callGemini(prompt);
-        return rawResponse != null ? rawResponse : "Unable to generate tailored CV at this time. Please try again.";
+        return callGemini(prompt);
     }
 
     // ── FR-46: Cover Letter Generator ────────────────────────────────────────
@@ -539,8 +524,7 @@ public class GeminiAIService {
             orNA(profile.getAchievements())
         );
 
-        String rawResponse = callGemini(prompt);
-        return rawResponse != null ? rawResponse : "Unable to generate cover letter at this time. Please try again.";
+        return callGemini(prompt);
     }
 
     // ── FR-xx: General AI Assistant ───────────────────────────────────────────
@@ -569,8 +553,7 @@ public class GeminiAIService {
         prompt.append("Student's Message:\n");
         prompt.append(message);
 
-        String rawResponse = callGemini(prompt.toString());
-        return rawResponse != null ? rawResponse : "Unable to process your request at this time. Please try again.";
+        return callGemini(prompt.toString());
     }
 
     // ── Document Verification Support ─────────────────────────────────────────
@@ -595,7 +578,7 @@ public class GeminiAIService {
     private String callGemini(String prompt) {
         if (geminiApiKey == null || geminiApiKey.isBlank()) {
             log.error("GEMINI_API_KEY is not configured. Set gemini.api-key in application.properties.");
-            return null;
+            throw new com.scholarlinkgh.exception.AiGenerationException("AI service is currently unavailable. Please try again later.");
         }
 
         String url = geminiApiBaseUrl + "/" + geminiModel + ":generateContent?key=" + geminiApiKey;
@@ -625,7 +608,7 @@ public class GeminiAIService {
                     String errorBody = response.body() != null ? response.body().string() : "";
                     log.error("Gemini API error: HTTP {} — {} — {}",
                         response.code(), response.message(), errorBody);
-                    return null;
+                    throw new com.scholarlinkgh.exception.AiGenerationException("Unable to process your request at this time. Please try again.");
                 }
 
                 String responseBody = response.body().string();
@@ -642,12 +625,12 @@ public class GeminiAIService {
                 }
 
                 log.warn("Gemini API returned no candidates in response");
-                return null;
+                throw new com.scholarlinkgh.exception.AiGenerationException("Unable to process your request at this time. Please try again.");
             }
 
         } catch (IOException e) {
             log.error("Failed to call Gemini API: {}", e.getMessage());
-            return null;
+            throw new com.scholarlinkgh.exception.AiGenerationException("Failed to connect to AI service. Please try again.");
         }
     }
 

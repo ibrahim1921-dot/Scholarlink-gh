@@ -39,4 +39,7 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
         org.springframework.data.domain.Pageable pageable
     );
     long countByStudent(User student);
+
+    /** Returns all applications for a given job listing (used by CSV export). */
+    List<JobApplication> findByJob(JobListing job);
 }

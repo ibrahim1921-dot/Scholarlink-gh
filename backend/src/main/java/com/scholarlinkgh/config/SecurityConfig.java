@@ -96,6 +96,8 @@ public class SecurityConfig {
                     "/api/v1/auth/forgot-password",
                     "/api/v1/auth/reset-password"
                 ).permitAll()
+                // Paystack Webhook
+                .requestMatchers(HttpMethod.POST, "/api/v1/payments/webhook").permitAll()
                 // Multipart file uploads — allow any authenticated user
                 .requestMatchers(HttpMethod.POST, "/api/v1/documents/upload").authenticated()
                 .anyRequest().authenticated()
@@ -127,7 +129,8 @@ public class SecurityConfig {
             "Authorization",
             "Content-Type",
             "Accept",
-            "X-Requested-With"
+            "X-Requested-With",
+            "x-paystack-signature"
         ));
         config.setExposedHeaders(List.of("Authorization"));
         config.setAllowCredentials(true);

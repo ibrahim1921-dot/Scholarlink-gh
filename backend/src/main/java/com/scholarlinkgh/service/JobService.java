@@ -84,6 +84,10 @@ public class JobService {
             .employmentType(request.getEmploymentType())
             .experienceLevel(request.getExperienceLevel())
             .workMode(request.getWorkMode())
+            .allowsAssistedApplication(request.isAllowsAssistedApplication())
+            .assistedApplicationFee(request.getAssistedApplicationFee())
+            .sponsored(request.isSponsored())
+            .sponsorName(request.getSponsorName())
             .active(true)
             .createdBy(admin)
             .build();
@@ -126,6 +130,10 @@ public class JobService {
         job.setEmploymentType(request.getEmploymentType());
         job.setExperienceLevel(request.getExperienceLevel());
         job.setWorkMode(request.getWorkMode());
+        job.setAllowsAssistedApplication(request.isAllowsAssistedApplication());
+        job.setAssistedApplicationFee(request.getAssistedApplicationFee());
+        job.setSponsored(request.isSponsored());
+        job.setSponsorName(request.getSponsorName());
 
         JobListing updated = jobListingRepository.save(job);
         auditService.log(admin.getId(), admin.getEmail(), "UPDATE_JOB", "JobListing", updated.getId(), updated.getTitle());

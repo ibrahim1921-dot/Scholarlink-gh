@@ -147,6 +147,13 @@ public class Scholarship {
 
     private Double assistedApplicationFee;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean sponsored = false;
+
+    @Column(length = 255)
+    private String sponsorName;
+
     /**
      * Whether admin has verified this listing is legitimate.
      * OWASP A04: only verified listings are shown to students.

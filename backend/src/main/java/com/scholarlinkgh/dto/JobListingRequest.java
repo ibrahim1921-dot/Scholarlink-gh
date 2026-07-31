@@ -46,4 +46,9 @@ public class JobListingRequest {
 
     @NotNull(message = "Work mode is required")
     private WorkMode workMode;
+
+    private boolean allowsAssistedApplication = true;
+    private Double assistedApplicationFee;
+    private boolean sponsored;
+    private String sponsorName;
 }

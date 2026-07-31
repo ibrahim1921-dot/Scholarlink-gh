@@ -19,6 +19,7 @@ import { SuspiciousDocumentList } from "./pages/suspicious-documents/list";
 import { AuditLogList } from "./pages/audit-logs/list";
 import { AdminDocumentList } from "./pages/documents/list";
 import { DashboardPage } from "./pages/dashboard";
+import { PaymentList } from "./pages/payments/list";
 
 function App() {
   return (
@@ -102,6 +103,13 @@ function App() {
               label: "Documents",
             },
           },
+          {
+            name: "payments",
+            list: "/payments",
+            meta: {
+              label: "Payments",
+            },
+          },
         ]}
         options={{
           syncWithLocation: true,
@@ -165,6 +173,10 @@ function App() {
 
             <Route path="/admin-documents">
               <Route index element={<AdminDocumentList />} />
+            </Route>
+
+            <Route path="/payments">
+              <Route index element={<PaymentList />} />
             </Route>
 
             <Route path="*" element={<CatchAllNavigate to="/dashboard" />} />

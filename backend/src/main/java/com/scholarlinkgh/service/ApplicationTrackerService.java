@@ -86,7 +86,8 @@ public class ApplicationTrackerService {
         ApplicationTracker tracker = ApplicationTracker.builder()
             .student(user)
             .scholarship(scholarship)
-            .status(ApplicationStatus.RESEARCHING)
+            .status(request.getStatus() != null ? request.getStatus() : ApplicationStatus.RESEARCHING)
+            .applicationMode(request.getApplicationMode() != null ? request.getApplicationMode() : com.scholarlinkgh.entity.ApplicationMode.DIRECT)
             .notes(request.getNotes())
             .build();
 

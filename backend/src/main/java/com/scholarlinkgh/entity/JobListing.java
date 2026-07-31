@@ -112,6 +112,19 @@ public class JobListing {
     @Column(length = 50)
     private WorkMode workMode;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean allowsAssistedApplication = true;
+
+    private Double assistedApplicationFee;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean sponsored = false;
+
+    @Column(length = 255)
+    private String sponsorName;
+
     /** Whether this listing is currently visible to students. */
     @Column(nullable = false)
     @Builder.Default

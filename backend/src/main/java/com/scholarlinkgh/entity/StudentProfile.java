@@ -132,6 +132,25 @@ public class StudentProfile {
     @Column(columnDefinition = "TEXT")
     private String profileImprovementSuggestions;
 
+    // ── AI Credits ─────────────────────────────────────────────────────────────
+
+    /**
+     * Remaining AI generation credits. New students receive a free allotment
+     * defined by {@link com.scholarlinkgh.service.AiCreditService#FREE_ALLOTMENT}.
+     * Decremented on each successful AI generation, replenished by admin grant
+     * or (future) purchase.
+     */
+    @Column(nullable = false, columnDefinition = "integer default 5")
+    @Builder.Default
+    private Integer aiCreditsRemaining = 5;
+
+    /**
+     * Lifetime total of AI credits consumed. Analytics-only — not user-facing.
+     */
+    @Column(nullable = false, columnDefinition = "integer default 0")
+    @Builder.Default
+    private Integer aiCreditsUsedTotal = 0;
+
     // ── Compliance ────────────────────────────────────────────────────────────
 
     /**

@@ -43,6 +43,8 @@ public class ScholarshipResponse {
     private String status;
     private boolean allowsAssistedApplication;
     private Double assistedApplicationFee;
+    private boolean sponsored;
+    private String sponsorName;
     private boolean verified;
     private boolean active;
     private Integer reportCount;
@@ -57,10 +59,12 @@ public class ScholarshipResponse {
 
         // Resolve status: use the explicit field when set, otherwise derive from deadline
         String resolvedStatus;
-        if (scholarship.getStatus() != null) {
-            resolvedStatus = scholarship.getStatus().name();
+        if (scholarship.getStatus() == ScholarshipStatus.FULL) {
+            resolvedStatus = ScholarshipStatus.FULL.name();
         } else if (daysUntil < 0) {
             resolvedStatus = ScholarshipStatus.CLOSED.name();
+        } else if (scholarship.getStatus() != null) {
+            resolvedStatus = scholarship.getStatus().name();
         } else if (daysUntil == 0) {
             resolvedStatus = ScholarshipStatus.CLOSING_SOON.name();
         } else {
@@ -86,6 +90,8 @@ public class ScholarshipResponse {
             .status(resolvedStatus)
             .allowsAssistedApplication(scholarship.isAllowsAssistedApplication())
             .assistedApplicationFee(scholarship.getAssistedApplicationFee())
+            .sponsored(scholarship.isSponsored())
+            .sponsorName(scholarship.getSponsorName())
             .verified(scholarship.isVerified())
             .active(scholarship.isActive())
             .reportCount(scholarship.getReportCount())

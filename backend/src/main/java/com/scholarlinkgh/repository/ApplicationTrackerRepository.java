@@ -70,4 +70,7 @@ public interface ApplicationTrackerRepository extends JpaRepository<ApplicationT
         org.springframework.data.domain.Pageable pageable
     );
     long countByStudent(User student);
+
+    /** Returns all trackers for a given scholarship (used by CSV export). */
+    List<ApplicationTracker> findByScholarship(Scholarship scholarship);
 }

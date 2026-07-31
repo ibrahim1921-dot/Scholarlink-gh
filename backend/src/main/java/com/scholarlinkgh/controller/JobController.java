@@ -8,6 +8,7 @@ import com.scholarlinkgh.entity.EmploymentType;
 import com.scholarlinkgh.entity.ExperienceLevel;
 import com.scholarlinkgh.entity.WorkMode;
 import com.scholarlinkgh.service.JobService;
+import com.scholarlinkgh.entity.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class JobController {
 
     private final JobService jobService;
+    private final com.scholarlinkgh.service.AiCreditService aiCreditService;
 
     // ── Admin Endpoints ───────────────────────────────────────────────────────
 
@@ -145,7 +147,10 @@ public class JobController {
      */
     @GetMapping("/matches")
     public ResponseEntity<Object> getAiMatchedJobs() {
+        User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
         String result = jobService.getAiMatchedJobs();
+        aiCreditService.consumeCredit(user);
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper =
                 new com.fasterxml.jackson.databind.ObjectMapper();
@@ -156,8 +161,12 @@ public class JobController {
     }
 
     @PostMapping("/{id}/generate-cover-letter")
-    public ResponseEntity<ApiResponse> generateCoverLetterDraft(@PathVariable Long id) {
-        return ResponseEntity.ok(jobService.generateCoverLetterDraft(id));
+    public ResponseEntity<com.scholarlinkgh.dto.ApiResponse> generateCoverLetterDraft(@PathVariable Long id) {
+        User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
+        com.scholarlinkgh.dto.ApiResponse result = jobService.generateCoverLetterDraft(id);
+        aiCreditService.consumeCredit(user);
+        return ResponseEntity.ok(result);
     }
 
     /**
@@ -214,9 +223,12 @@ public class JobController {
      * Requires: valid JWT
      */
     @PostMapping("/generate-cv")
-    public ResponseEntity<ApiResponse> generateCv() {
+    public ResponseEntity<com.scholarlinkgh.dto.ApiResponse> generateCv() {
+        User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
         String cv = jobService.generateCv();
-        return ResponseEntity.ok(ApiResponse.builder().success(true).message(cv).build());
+        aiCreditService.consumeCredit(user);
+        return ResponseEntity.ok(com.scholarlinkgh.dto.ApiResponse.builder().success(true).message(cv).build());
     }
 
     /**
@@ -224,9 +236,12 @@ public class JobController {
      * Generates a professional Markdown CV tailored to a specific job.
      */
     @PostMapping("/{id}/generate-cv")
-    public ResponseEntity<ApiResponse> generateTailoredCv(@PathVariable Long id) {
+    public ResponseEntity<com.scholarlinkgh.dto.ApiResponse> generateTailoredCv(@PathVariable Long id) {
+        User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
         String cv = jobService.generateTailoredCv(id);
-        return ResponseEntity.ok(ApiResponse.builder().success(true).message(cv).build());
+        aiCreditService.consumeCredit(user);
+        return ResponseEntity.ok(com.scholarlinkgh.dto.ApiResponse.builder().success(true).message(cv).build());
     }
 
     /**
@@ -237,8 +252,18 @@ public class JobController {
      * Requires: valid JWT
      */
     @PostMapping("/{id}/cover-letter")
-    public ResponseEntity<ApiResponse> generateCoverLetter(@PathVariable Long id) {
+    public ResponseEntity<com.scholarlinkgh.dto.ApiResponse> generateCoverLetter(@PathVariable Long id) {
+        User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
         String letter = jobService.generateCoverLetter(id);
-        return ResponseEntity.ok(ApiResponse.builder().success(true).message(letter).build());
+        aiCreditService.consumeCredit(user);
+        return ResponseEntity.ok(com.scholarlinkgh.dto.ApiResponse.builder().success(true).message(letter).build());
+    }
+
+    // ── Helper ─────────────────────────────────────────────────────────────────
+
+    private User getCurrentUser() {
+        org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        return (User) auth.getPrincipal();
     }
 }

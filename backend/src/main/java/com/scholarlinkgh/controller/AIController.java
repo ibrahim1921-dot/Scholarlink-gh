@@ -10,6 +10,7 @@ import com.scholarlinkgh.entity.ScholarshipMatch;
 import com.scholarlinkgh.entity.User;
 import com.scholarlinkgh.repository.DocumentUploadRepository;
 import com.scholarlinkgh.repository.ScholarshipRepository;
+import com.scholarlinkgh.service.AiCreditService;
 import com.scholarlinkgh.service.DocumentVerificationService;
 import com.scholarlinkgh.service.GeminiAIService;
 import jakarta.validation.Valid;
@@ -46,6 +47,7 @@ import java.util.List;
 public class AIController {
 
     private final GeminiAIService geminiAIService;
+    private final AiCreditService aiCreditService;
     private final ScholarshipRepository scholarshipRepository;
     private final DocumentUploadRepository documentUploadRepository;
     private final DocumentVerificationService documentVerificationService;
@@ -63,6 +65,7 @@ public class AIController {
     @PostMapping("/api/v1/ai/ask")
     public ResponseEntity<ApiResponse> askAssistant(@RequestBody java.util.Map<String, Object> body) {
         User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
         String message = (String) body.getOrDefault("message", "");
 
         if (message.isBlank()) {
@@ -106,6 +109,9 @@ public class AIController {
 
         String responseText = geminiAIService.askAssistant(user, message, documentText);
 
+        // Only consume credit on successful generation
+        aiCreditService.consumeCredit(user);
+
         if (attachmentFailed) {
             responseText = "Note: I couldn't read the attached document, so I'm answering based on your message only.\n\n" + responseText;
         }
@@ -113,6 +119,7 @@ public class AIController {
         return ResponseEntity.ok(ApiResponse.builder()
             .success(true)
             .message(responseText)
+            .data(java.util.Map.of("aiCreditsRemaining", aiCreditService.getCredits(user)))
             .build());
     }
 
@@ -129,6 +136,7 @@ public class AIController {
     @GetMapping("/api/v1/ai/scholarships/matches")
     public ResponseEntity<List<ScholarshipMatchResponse>> getScholarshipMatches() {
         User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
         List<ScholarshipMatch> matches = geminiAIService.matchStudentToScholarships(user);
         List<ScholarshipMatchResponse> response = matches.stream()
             .map(ScholarshipMatchResponse::from)
@@ -151,6 +159,7 @@ public class AIController {
     @GetMapping("/api/v1/scholarships/{id}/eligibility")
     public ResponseEntity<Object> checkEligibility(@PathVariable Long id) {
         User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
 
         Scholarship scholarship = scholarshipRepository.findById(id)
             .orElse(null);
@@ -184,6 +193,7 @@ public class AIController {
     public ResponseEntity<ApiResponse> generatePersonalStatement(
             @RequestBody PersonalStatementRequest request) {
         User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
 
         Scholarship scholarship = null;
         if (request.getScholarshipId() != null) {
@@ -201,9 +211,12 @@ public class AIController {
             statement = geminiAIService.generatePersonalStatement(user, null, request.getKeyPoints());
         }
 
+        aiCreditService.consumeCredit(user);
+
         return ResponseEntity.ok(ApiResponse.builder()
             .success(true)
             .message(statement)
+            .data(java.util.Map.of("aiCreditsRemaining", aiCreditService.getCredits(user)))
             .build());
     }
 
@@ -281,8 +294,11 @@ public class AIController {
     @PostMapping("/api/v1/ai/generate-cv")
     public ResponseEntity<ApiResponse> generateCv() {
         User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
         String cv = geminiAIService.generateCv(user);
-        return ResponseEntity.ok(ApiResponse.builder().success(true).message(cv).build());
+        aiCreditService.consumeCredit(user);
+        return ResponseEntity.ok(ApiResponse.builder().success(true).message(cv)
+            .data(java.util.Map.of("aiCreditsRemaining", aiCreditService.getCredits(user))).build());
     }
 
     // ── FR-46: AI Cover Letter ───────────────────────────────────────────────
@@ -300,13 +316,32 @@ public class AIController {
     public ResponseEntity<ApiResponse> generateCoverLetter(
             @RequestBody java.util.Map<String, String> body) {
         User user = getCurrentUser();
+        aiCreditService.validateCredits(user);
 
         String jobTitle = body.getOrDefault("job_title", "the position");
         String company = body.getOrDefault("company", "the company");
         String jobDescription = body.getOrDefault("job_description", "");
 
         String letter = geminiAIService.generateCoverLetter(user, jobTitle, jobDescription, company);
-        return ResponseEntity.ok(ApiResponse.builder().success(true).message(letter).build());
+        aiCreditService.consumeCredit(user);
+        return ResponseEntity.ok(ApiResponse.builder().success(true).message(letter)
+            .data(java.util.Map.of("aiCreditsRemaining", aiCreditService.getCredits(user))).build());
+    }
+
+    // ── AI Credits ────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/v1/ai/credits
+     *
+     * Returns the current student's remaining AI credit balance.
+     */
+    @GetMapping("/api/v1/ai/credits")
+    public ResponseEntity<java.util.Map<String, Object>> getAiCredits() {
+        User user = getCurrentUser();
+        int remaining = aiCreditService.getCredits(user);
+        return ResponseEntity.ok(java.util.Map.of(
+            "aiCreditsRemaining", remaining
+        ));
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────

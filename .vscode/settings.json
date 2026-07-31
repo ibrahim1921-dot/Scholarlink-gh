@@ -1,0 +1,4 @@
+{
+  "java.compile.nullAnalysis.mode": "automatic",
+  "github.copilot.chat.completionContext.typescript.mode": "on"
+}

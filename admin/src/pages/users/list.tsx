@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, ShieldAlert, ShieldCheck, Trash2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ShieldAlert, ShieldCheck, Trash2, Sparkles } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +36,11 @@ export const UserList: React.FC = () => {
   const [actionUser, setActionUser] = useState<any>(null);
   const [actionType, setActionType] = useState<"promote" | "demote" | "delete" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  const [grantUser, setGrantUser] = useState<any>(null);
+  const [grantAmount, setGrantAmount] = useState("");
+  const [grantError, setGrantError] = useState<string | null>(null);
+  const [grantSuccess, setGrantSuccess] = useState<string | null>(null);
 
   const { mutate } = useCustomMutation();
   const invalidate = useInvalidate();
@@ -184,6 +189,22 @@ export const UserList: React.FC = () => {
                         <Trash2 className="h-4 w-4 mr-1" />
                         Delete
                       </Button>
+                      {user.role === "STUDENT" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setGrantUser(user);
+                            setGrantAmount("");
+                            setGrantError(null);
+                            setGrantSuccess(null);
+                          }}
+                          className="ml-2 border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white"
+                        >
+                          <Sparkles className="h-4 w-4 mr-1" />
+                          Grant Credits
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -244,6 +265,69 @@ export const UserList: React.FC = () => {
               className={actionType === "demote" || actionType === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
             >
               {actionType === "delete" ? "Delete" : "Confirm"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Grant AI Credits Dialog */}
+      <AlertDialog open={!!grantUser} onOpenChange={(open) => !open && setGrantUser(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Grant AI Credits</AlertDialogTitle>
+            <AlertDialogDescription>
+              Grant AI generation credits to <strong>{grantUser?.email}</strong>. Enter the number of credits to add.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Input
+              type="number"
+              min="1"
+              placeholder="Number of credits"
+              value={grantAmount}
+              onChange={(e) => setGrantAmount(e.target.value)}
+            />
+          </div>
+          {grantError && (
+            <div className="text-sm font-medium text-destructive">
+              {grantError}
+            </div>
+          )}
+          {grantSuccess && (
+            <div className="text-sm font-medium text-green-600">
+              {grantSuccess}
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const amount = parseInt(grantAmount);
+                if (!amount || amount <= 0) {
+                  setGrantError("Please enter a valid positive number.");
+                  return;
+                }
+                setGrantError(null);
+                mutate(
+                  {
+                    url: `/admin/users/${grantUser.id}/grant-credits`,
+                    method: "post",
+                    values: { amount },
+                  },
+                  {
+                    onSuccess: (data: any) => {
+                      setGrantSuccess(`Granted ${amount} credits. New balance: ${data?.data?.aiCreditsRemaining ?? 'updated'}`);
+                      invalidate({ resource: "users", invalidates: ["list"] });
+                      setTimeout(() => setGrantUser(null), 1500);
+                    },
+                    onError: (error: any) => {
+                      setGrantError(error?.response?.data?.message || error?.message || "Failed to grant credits");
+                    }
+                  }
+                );
+              }}
+            >
+              Grant Credits
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -14,8 +14,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import com.scholarlinkgh.exception.ResourceNotFoundException;
-
-
+import com.scholarlinkgh.exception.AiGenerationException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -148,6 +147,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
                 "success", false,
                 "message", ex.getMessage()
+        ));
+    }
+
+    /**
+     * AI generation failed (e.g. Gemini API error).
+     */
+    @ExceptionHandler(AiGenerationException.class)
+    public ResponseEntity<Map<String, Object>> handleAiGenerationException(
+            AiGenerationException ex) {
+
+        log.warn("AI generation error: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of(
+            "success", false,
+            "message", ex.getMessage()
         ));
     }
 

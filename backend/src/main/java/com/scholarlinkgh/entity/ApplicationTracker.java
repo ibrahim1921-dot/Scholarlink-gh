@@ -125,9 +125,6 @@ public class ApplicationTracker {
         }
         LocalDate today = LocalDate.now();
         LocalDate deadline = scholarship.getDeadline();
-        if (deadline.isBefore(today)) {
-            return 0L;
-        }
         return (long) (deadline.toEpochDay() - today.toEpochDay());
     }
 

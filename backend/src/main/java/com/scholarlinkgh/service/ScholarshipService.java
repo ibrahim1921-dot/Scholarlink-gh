@@ -257,6 +257,8 @@ public class ScholarshipService {
             .status(request.getStatus())
             .allowsAssistedApplication(request.isAllowsAssistedApplication())
             .assistedApplicationFee(request.getAssistedApplicationFee())
+            .sponsored(request.isSponsored())
+            .sponsorName(request.getSponsorName())
             .verified(false)
             .active(false)
             .reportCount(0)
@@ -298,6 +300,8 @@ public class ScholarshipService {
         scholarship.setStatus(request.getStatus());
         scholarship.setAllowsAssistedApplication(request.isAllowsAssistedApplication());
         scholarship.setAssistedApplicationFee(request.getAssistedApplicationFee());
+        scholarship.setSponsored(request.isSponsored());
+        scholarship.setSponsorName(request.getSponsorName());
 
         Scholarship updated = scholarshipRepository.save(scholarship);
 

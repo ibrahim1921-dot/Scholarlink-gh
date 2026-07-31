@@ -81,4 +81,8 @@ public class ScholarshipRequest {
     private boolean allowsAssistedApplication;
 
     private Double assistedApplicationFee;
+
+    private boolean sponsored;
+
+    private String sponsorName;
 }

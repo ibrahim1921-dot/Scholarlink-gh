@@ -23,6 +23,8 @@ public class ScholarshipMatchResponse {
     private LocalDate deadline;
     private String fundingCoverage;
     private String officialLink;
+    private Long daysUntilDeadline;
+    private String status;
     /** AI-generated match score 0-100. Higher = better fit. */
     private Integer matchScore;
     /** AI-generated explanation of the score. */
@@ -31,6 +33,20 @@ public class ScholarshipMatchResponse {
 
     /** Maps a ScholarshipMatch entity to the response DTO. */
     public static ScholarshipMatchResponse from(ScholarshipMatch match) {
+        long daysUntil = java.time.temporal.ChronoUnit.DAYS.between(LocalDate.now(), match.getScholarship().getDeadline());
+        String resolvedStatus;
+        if (match.getScholarship().getStatus() == com.scholarlinkgh.entity.ScholarshipStatus.FULL) {
+            resolvedStatus = com.scholarlinkgh.entity.ScholarshipStatus.FULL.name();
+        } else if (daysUntil < 0) {
+            resolvedStatus = com.scholarlinkgh.entity.ScholarshipStatus.CLOSED.name();
+        } else if (match.getScholarship().getStatus() != null) {
+            resolvedStatus = match.getScholarship().getStatus().name();
+        } else if (daysUntil == 0) {
+            resolvedStatus = com.scholarlinkgh.entity.ScholarshipStatus.CLOSING_SOON.name();
+        } else {
+            resolvedStatus = com.scholarlinkgh.entity.ScholarshipStatus.OPEN.name();
+        }
+
         return ScholarshipMatchResponse.builder()
             .matchId(match.getId())
             .scholarshipId(match.getScholarship().getId())
@@ -40,6 +56,8 @@ public class ScholarshipMatchResponse {
             .deadline(match.getScholarship().getDeadline())
             .fundingCoverage(match.getScholarship().getFundingCoverage())
             .officialLink(match.getScholarship().getOfficialLink())
+            .daysUntilDeadline(daysUntil)
+            .status(resolvedStatus)
             .matchScore(match.getMatchScore())
             .matchExplanation(match.getMatchExplanation())
             .matchedAt(match.getCreatedAt())

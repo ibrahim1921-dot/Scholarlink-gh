@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+    private final com.scholarlinkgh.service.AiCreditService aiCreditService;
+    private final com.scholarlinkgh.repository.UserRepository userRepository;
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
@@ -81,6 +83,52 @@ public class AdminUserController {
                 .success(false)
                 .message(ex.getMessage())
                 .build());
+        }
+    }
+
+    /**
+     * POST /api/v1/admin/users/{id}/grant-credits
+     *
+     * Grants AI credits to a specific user.
+     * Request body: { "amount": number }
+     *
+     * This is the temporary stand-in for "purchase credits" until Phase 3
+     * wires real payment — an admin can manually top someone up for testing
+     * or support purposes in the meantime.
+     */
+    @PostMapping("/{id}/grant-credits")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> grantCredits(
+            @PathVariable Long id,
+            @org.springframework.web.bind.annotation.RequestBody java.util.Map<String, Object> body) {
+        try {
+            com.scholarlinkgh.entity.User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+            Object amountObj = body.get("amount");
+            if (amountObj == null) {
+                return ResponseEntity.badRequest().body(
+                    com.scholarlinkgh.dto.ApiResponse.builder()
+                        .success(false).message("Amount is required").build());
+            }
+
+            int amount;
+            if (amountObj instanceof Number) {
+                amount = ((Number) amountObj).intValue();
+            } else {
+                amount = Integer.parseInt(amountObj.toString());
+            }
+
+            int newBalance = aiCreditService.grantCredits(user, amount);
+            return ResponseEntity.ok(java.util.Map.of(
+                "success", true,
+                "message", "Granted " + amount + " AI credits to " + user.getEmail(),
+                "aiCreditsRemaining", newBalance
+            ));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(
+                com.scholarlinkgh.dto.ApiResponse.builder()
+                    .success(false).message(ex.getMessage()).build());
         }
     }
 }

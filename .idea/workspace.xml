@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="1edffc86-605e-4f2f-b18b-5a24b1256d7e" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/admin/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/components/layout/index.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/components/layout/index.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/jobs/create.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/jobs/create.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/jobs/edit.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/jobs/edit.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/scholarships/create.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/scholarships/create.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/scholarships/edit.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/scholarships/edit.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/users/list.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/users/list.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/config/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/config/GlobalExceptionHandler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/config/SecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/config/SecurityConfig.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/controller/AIController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/controller/AIController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/controller/AdminUserController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/controller/AdminUserController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/controller/JobController.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/controller/JobController.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/ApiResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/ApiResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/JobListingRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/JobListingRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/JobListingResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/JobListingResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/ScholarshipMatchResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/ScholarshipMatchResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/ScholarshipRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/ScholarshipRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/ScholarshipResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/dto/ScholarshipResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/entity/ApplicationTracker.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/entity/ApplicationTracker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/entity/JobListing.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/entity/JobListing.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/entity/Scholarship.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/entity/Scholarship.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/entity/StudentProfile.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/entity/StudentProfile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/repository/ApplicationTrackerRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/repository/ApplicationTrackerRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/repository/JobApplicationRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/repository/JobApplicationRepository.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/service/ApplicationTrackerService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/service/ApplicationTrackerService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/service/GeminiAIService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/service/GeminiAIService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/service/JobService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/service/JobService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/service/ScholarshipService.java" beforeDir="false" afterPath="$PROJECT_DIR$/backend/src/main/java/com/scholarlinkgh/service/ScholarshipService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/target/classes/application.properties.example" beforeDir="false" afterPath="$PROJECT_DIR$/backend/target/classes/application.properties.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/backend/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/backend/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/createdFiles.lst" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/inputFiles.lst" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/update_pwd.sql" beforeDir="false" afterPath="$PROJECT_DIR$/backend/update_pwd.sql" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/firebase_notification_guide.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/.gitkeep" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/app.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/app.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/app/(tabs)/assistant.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/app/(tabs)/assistant.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/app/(tabs)/career.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/app/(tabs)/career.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/app/(tabs)/scholarships.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/app/(tabs)/scholarships.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/app/job/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/app/job/[id].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/app/scholarship/[id].tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/app/scholarship/[id].tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/components/JobApplyModals.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/components/JobApplyModals.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/components/ScholarshipApplyModals.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/components/ScholarshipApplyModals.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/components/ScholarshipCard.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/components/ScholarshipCard.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/eas.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/eas.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/hooks/useJobApplyFlow.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/hooks/useJobApplyFlow.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/hooks/useScholarship.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/hooks/useScholarship.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/hooks/useScholarshipApplyFlow.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/hooks/useScholarshipApplyFlow.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/services/aiService.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/services/aiService.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/services/apiClient.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/services/apiClient.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/services/tokenRefresh.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/services/tokenRefresh.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/mobile/scholarlink-gh/types/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/mobile/scholarlink-gh/types/api.ts" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="1736" />
+    <option name="fileBasedEmbeddingIndicesEnabled" value="true" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;ibrahim1921-dot&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/wildDreams-01/Scholarlink.git&quot;,
+    &quot;accountId&quot;: &quot;f884fa35-f2f8-488a-945b-b2993fb1ebe3&quot;
+  }
+}</component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHomeTypeForPersistence" value="WRAPPER" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="ProjectErrors" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 7,
+  &quot;fromUser&quot;: false
+}</component>
+  <component name="ProjectId" id="3EZsHYEFP5U0gxCWA7dsAvD1kBY" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/Administrator/Desktop/Scholarlink/backend&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;terminal&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;,
+    &quot;ts.external.directory.path&quot;: &quot;C:\\Users\\Administrator\\OneDrive\\Desktop\\Scholarlink\\admin\\node_modules\\typescript\\lib&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\Administrator\Desktop\Scholarlink\backend" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Administrator\Desktop\Scholarlink\backend\docs" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="BackendApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <module name="backend" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.scholarlinkgh.backend.BackendApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="1edffc86-605e-4f2f-b18b-5a24b1256d7e" name="Changes" comment="" />
+      <created>1780397339662</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1780397339662</updated>
+      <workItem from="1780397340507" duration="68813000" />
+      <workItem from="1780790782512" duration="1222000" />
+      <workItem from="1780840895659" duration="44649000" />
+      <workItem from="1781165882994" duration="55794000" />
+      <workItem from="1781688735493" duration="9715000" />
+      <workItem from="1782464854110" duration="26018000" />
+      <workItem from="1784287030970" duration="2237000" />
+      <workItem from="1784683081125" duration="9757000" />
+      <workItem from="1784790475344" duration="36970000" />
+      <workItem from="1785455523194" duration="7602000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TerminalProjectNonSharedOptionsProvider">
+    <envs>
+      <env key="PATH" value="C:\Users\Administrator\AppData\Local\agy\bin" />
+    </envs>
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

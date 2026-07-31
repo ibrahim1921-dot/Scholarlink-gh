@@ -1,7 +1,7 @@
 import React from "react";
 import { useMenu, useLogout, useGetIdentity } from "@refinedev/core";
 import { NavLink, Outlet } from "react-router-dom";
-import { Users, LogOut, LayoutDashboard, Briefcase, GraduationCap, FileText, FileSearch, ShieldAlert, Hourglass, ClipboardList, FolderOpen } from "lucide-react";
+import { Users, LogOut, LayoutDashboard, Briefcase, GraduationCap, FileText, FileSearch, ShieldAlert, Hourglass, ClipboardList, FolderOpen, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoFull from "@/assets/logo-full.png";
 
@@ -21,6 +21,7 @@ export const Layout: React.FC<React.PropsWithChildren> = ({ children }) => {
     "suspicious-documents": <ShieldAlert size={20} />,
     "audit-logs": <ClipboardList size={20} />,
     "admin-documents": <FolderOpen size={20} />,
+    payments: <CreditCard size={20} />,
   };
 
   return (

@@ -43,6 +43,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- JSR-305 for javax.annotation.Nonnull -->
+        <dependency>
+            <groupId>com.google.code.findbugs</groupId>
+            <artifactId>jsr305</artifactId>
+            <version>3.0.2</version>
+        </dependency>
+
         <!-- JPA — database access via Hibernate -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
