@@ -221,6 +221,52 @@ public class DocumentController {
     }
 
     /**
+     * GET /api/v1/documents/{id}/download
+     *
+     * Proxy endpoint to download the raw document file securely for the student.
+     */
+    @GetMapping("/{id}/download")
+    public ResponseEntity<org.springframework.core.io.Resource> downloadMyDocument(@PathVariable Long id) {
+        User user = getCurrentUser();
+        DocumentUpload doc = documentUploadRepository.findById(id).orElse(null);
+
+        if (doc == null || !doc.getStudent().getId().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        try {
+            org.springframework.web.client.RestTemplate restTemplate = new org.springframework.web.client.RestTemplate();
+            org.springframework.http.client.SimpleClientHttpRequestFactory requestFactory = new org.springframework.http.client.SimpleClientHttpRequestFactory();
+            requestFactory.setConnectTimeout(10000);
+            requestFactory.setReadTimeout(10000);
+            restTemplate.setRequestFactory(requestFactory);
+
+            ResponseEntity<org.springframework.core.io.Resource> response = restTemplate.getForEntity(doc.getStoragePath(), org.springframework.core.io.Resource.class);
+            
+            if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
+                org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+                headers.add(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + doc.getFilename() + "\"");
+                
+                String mimeType = doc.getMimeType();
+                if (mimeType != null && !mimeType.isBlank()) {
+                    headers.setContentType(org.springframework.http.MediaType.parseMediaType(mimeType));
+                } else {
+                    headers.setContentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+                }
+                
+                return ResponseEntity.ok()
+                        .headers(headers)
+                        .body(response.getBody());
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+            }
+        } catch (org.springframework.web.client.RestClientException e) {
+            log.error("Failed to proxy document download for id {}: {}", id, e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY).build();
+        }
+    }
+
+    /**
      * DELETE /api/v1/documents/{id}
      *
      * Deletes a document from Cloudinary and the database.

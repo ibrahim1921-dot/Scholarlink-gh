@@ -136,15 +136,15 @@ public class GeminiAIService {
      * @return ranked list of ScholarshipMatch objects (highest score first)
      */
     @Transactional
-    public List<ScholarshipMatch> matchStudentToScholarships(User user) {
-        // Check for fresh cached results
-        LocalDateTime cacheThreshold = LocalDateTime.now().minusHours(matchCacheHours);
-        List<ScholarshipMatch> cached =
-            scholarshipMatchRepository.findFreshMatchesForStudent(user, cacheThreshold);
-
-        if (!cached.isEmpty()) {
-            log.info("Returning {} cached scholarship matches for user {}", cached.size(), user.getEmail());
-            return cached;
+    public List<ScholarshipMatch> matchStudentToScholarships(User user, boolean forceRefresh) {
+        if (!forceRefresh) {
+            List<ScholarshipMatch> cached =
+                scholarshipMatchRepository.findByStudentOrderByMatchScoreDesc(user);
+            if (!cached.isEmpty()) {
+                log.info("Returning {} cached scholarship matches for user {}", cached.size(), user.getEmail());
+                return cached;
+            }
+            return List.of();
         }
 
         // No valid cache — call Gemini API
@@ -195,10 +195,9 @@ public class GeminiAIService {
      */
     @Transactional
     public String checkEligibility(User user, Scholarship scholarship) {
-        // Check for fresh cached results
-        LocalDateTime cacheThreshold = LocalDateTime.now().minusHours(matchCacheHours);
+        // Check for cached results indefinitely
         Optional<EligibilityCheck> cached =
-            eligibilityCheckRepository.findFreshEligibilityCheck(user, scholarship, cacheThreshold);
+            eligibilityCheckRepository.findFreshEligibilityCheck(user, scholarship, LocalDateTime.MIN);
 
         if (cached.isPresent()) {
             log.info("Returning cached eligibility check for user={}, scholarship={}", user.getEmail(), scholarship.getId());

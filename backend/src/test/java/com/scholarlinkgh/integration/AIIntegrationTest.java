@@ -73,7 +73,7 @@ class AIIntegrationTest extends BaseIntegrationTest {
             scholarshipMatchRepository.save(match);
 
             // Mock the AI service to return the pre-created match
-            when(geminiAIService.matchStudentToScholarships(any()))
+            when(geminiAIService.matchStudentToScholarships(any(), org.mockito.ArgumentMatchers.anyBoolean()))
                 .thenReturn(List.of(match));
 
             // Act & Assert

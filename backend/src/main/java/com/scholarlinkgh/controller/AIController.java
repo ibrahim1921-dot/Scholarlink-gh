@@ -51,6 +51,7 @@ public class AIController {
     private final ScholarshipRepository scholarshipRepository;
     private final DocumentUploadRepository documentUploadRepository;
     private final DocumentVerificationService documentVerificationService;
+    private final com.scholarlinkgh.repository.StudentProfileRepository studentProfileRepository;
 
     // ── FR-xx: General AI Assistant ───────────────────────────────────────────
 
@@ -134,10 +135,21 @@ public class AIController {
      * Requires: valid JWT (STUDENT role)
      */
     @GetMapping("/api/v1/ai/scholarships/matches")
-    public ResponseEntity<List<ScholarshipMatchResponse>> getScholarshipMatches() {
+    public ResponseEntity<?> getScholarshipMatches(
+            @org.springframework.web.bind.annotation.RequestParam(defaultValue = "false") boolean refresh) {
         User user = getCurrentUser();
-        aiCreditService.validateCredits(user);
-        List<ScholarshipMatch> matches = geminiAIService.matchStudentToScholarships(user);
+        if (refresh) {
+            com.scholarlinkgh.entity.StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
+            int completeness = profile != null ? profile.calculateCompletenessPercentage() : 0;
+            if (completeness < 45) {
+                return ResponseEntity.status(422).body(ApiResponse.builder()
+                    .success(false)
+                    .message("Complete more of your profile to get personalized matches — you're at " + completeness + "%, we recommend at least 45%.")
+                    .build());
+            }
+            aiCreditService.validateCredits(user);
+        }
+        List<ScholarshipMatch> matches = geminiAIService.matchStudentToScholarships(user, refresh);
         List<ScholarshipMatchResponse> response = matches.stream()
             .map(ScholarshipMatchResponse::from)
             .toList();
@@ -159,6 +171,16 @@ public class AIController {
     @GetMapping("/api/v1/scholarships/{id}/eligibility")
     public ResponseEntity<Object> checkEligibility(@PathVariable Long id) {
         User user = getCurrentUser();
+        
+        com.scholarlinkgh.entity.StudentProfile profile = studentProfileRepository.findByUser(user).orElse(null);
+        int completeness = profile != null ? profile.calculateCompletenessPercentage() : 0;
+        if (completeness < 45) {
+            return ResponseEntity.status(422).body(ApiResponse.builder()
+                .success(false)
+                .message("Complete more of your profile to check eligibility — you're at " + completeness + "%, we recommend at least 45%.")
+                .build());
+        }
+        
         aiCreditService.validateCredits(user);
 
         Scholarship scholarship = scholarshipRepository.findById(id)

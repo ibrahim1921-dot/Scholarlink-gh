@@ -156,18 +156,6 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * POST /api/v1/auth/logout-all-devices
-     * Requires: valid JWT access token.
-     * Revokes all server-side refresh tokens for the current user across all devices.
-     */
-    @PostMapping("/logout-all-devices")
-    public ResponseEntity<ApiResponse> logoutAllDevices(
-            @AuthenticationPrincipal User user) {
-
-        ApiResponse response = authService.logout(user);
-        return ResponseEntity.ok(response);
-    }
 
     /**
      * POST /api/v1/auth/change-password

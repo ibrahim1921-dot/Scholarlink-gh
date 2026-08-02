@@ -69,6 +69,9 @@ public class StudentProfile {
     /** Institution / university attended. */
     private String institution;
 
+    /** Actual location where the student currently resides. */
+    private String originalLocation;
+
     /** Expected or actual graduation year. */
     private Integer graduationYear;
 
@@ -181,5 +184,28 @@ public class StudentProfile {
     @PreUpdate
     protected void onUpdate() {
         lastUpdated = LocalDateTime.now();
+    }
+
+    /**
+     * Calculates the profile completeness score (0-100) based on 11 core fields.
+     */
+    public int calculateCompletenessPercentage() {
+        int filledFields = 0;
+        int totalFields = 12;
+
+        if (educationLevel != null && !educationLevel.isBlank()) filledFields++;
+        if (institution != null && !institution.isBlank()) filledFields++;
+        if (originalLocation != null && !originalLocation.isBlank()) filledFields++;
+        if (fieldOfStudy != null && !fieldOfStudy.isBlank()) filledFields++;
+        if (gpa != null) filledFields++;
+        if (graduationYear != null) filledFields++;
+        if (countryPreference != null && !countryPreference.isBlank()) filledFields++;
+        if (financialNeed != null && !financialNeed.isBlank()) filledFields++;
+        if (languageProficiency != null && !languageProficiency.isBlank()) filledFields++;
+        if (bio != null && !bio.isBlank()) filledFields++;
+        if (achievements != null && !achievements.isBlank()) filledFields++;
+        if (skills != null && !skills.isEmpty()) filledFields++;
+
+        return (int) Math.round(((double) filledFields / totalFields) * 100);
     }
 }

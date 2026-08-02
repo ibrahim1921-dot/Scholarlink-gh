@@ -93,6 +93,9 @@ public class ProfileController {
         if (body.containsKey("institution")) {
             profile.setInstitution((String) body.get("institution"));
         }
+        if (body.containsKey("original_location")) {
+            profile.setOriginalLocation((String) body.get("original_location"));
+        }
         if (body.containsKey("graduation_year") && body.get("graduation_year") != null) {
             profile.setGraduationYear(Integer.parseInt(body.get("graduation_year").toString()));
         }
@@ -227,16 +230,17 @@ public class ProfileController {
         }
 
         int filledFields = 0;
-        int totalFields = 11;
+        int totalFields = 12;
         String nextStep = "/profile-setup";
 
         boolean hasEducationLevel = profile.getEducationLevel() != null && !profile.getEducationLevel().isBlank();
         boolean hasInstitution = profile.getInstitution() != null && !profile.getInstitution().isBlank();
+        boolean hasOriginalLocation = profile.getOriginalLocation() != null && !profile.getOriginalLocation().isBlank();
         boolean hasField = profile.getFieldOfStudy() != null && !profile.getFieldOfStudy().isBlank();
         boolean hasGpa = profile.getGpa() != null;
         boolean hasGradYear = profile.getGraduationYear() != null;
         
-        if (hasEducationLevel && hasInstitution && hasField && hasGpa && hasGradYear) {
+        if (hasEducationLevel && hasInstitution && hasOriginalLocation && hasField && hasGpa && hasGradYear) {
             nextStep = "/profile-setup-step-2";
         }
 
@@ -244,7 +248,7 @@ public class ProfileController {
         boolean hasLanguage = profile.getLanguageProficiency() != null && !profile.getLanguageProficiency().isBlank();
         boolean hasFinancialNeed = profile.getFinancialNeed() != null && !profile.getFinancialNeed().isBlank();
         
-        if (hasEducationLevel && hasInstitution && hasField && hasGpa && hasGradYear && hasCountry && hasLanguage) {
+        if (hasEducationLevel && hasInstitution && hasOriginalLocation && hasField && hasGpa && hasGradYear && hasCountry && hasLanguage) {
             nextStep = "/profile-setup-step-3";
         }
 
@@ -254,6 +258,7 @@ public class ProfileController {
 
         if (hasEducationLevel) filledFields++;
         if (hasInstitution) filledFields++;
+        if (hasOriginalLocation) filledFields++;
         if (hasField) filledFields++;
         if (hasGpa) filledFields++;
         if (hasGradYear) filledFields++;
@@ -268,7 +273,7 @@ public class ProfileController {
             nextStep = "/profile-summary";
         }
 
-        int percentage = (int) Math.round(((double) filledFields / totalFields) * 100);
+        int percentage = profile.calculateCompletenessPercentage();
 
         return ResponseEntity.ok(Map.of(
             "completeness", percentage,
