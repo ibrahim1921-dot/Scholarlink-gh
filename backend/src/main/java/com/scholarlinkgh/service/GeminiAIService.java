@@ -197,7 +197,7 @@ public class GeminiAIService {
     public String checkEligibility(User user, Scholarship scholarship) {
         // Check for cached results indefinitely
         Optional<EligibilityCheck> cached =
-            eligibilityCheckRepository.findFreshEligibilityCheck(user, scholarship, LocalDateTime.MIN);
+            eligibilityCheckRepository.findFreshEligibilityCheck(user, scholarship, LocalDateTime.of(1970, 1, 1, 0, 0));
 
         if (cached.isPresent()) {
             log.info("Returning cached eligibility check for user={}, scholarship={}", user.getEmail(), scholarship.getId());
