@@ -305,7 +305,9 @@ public class DocumentController {
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>> getSuspiciousDocuments() {
         List<DocumentUpload> docs =
-            documentUploadRepository.findByVerificationStatusOrderByUploadedAtAsc(VerificationStatus.SUSPICIOUS);
+            documentUploadRepository.findDocumentsForAdminReview(
+                List.of(VerificationStatus.SUSPICIOUS, VerificationStatus.REJECTED)
+            );
 
         List<Map<String, Object>> response = docs.stream()
             .map(d -> Map.<String, Object>of(

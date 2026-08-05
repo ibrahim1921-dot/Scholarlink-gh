@@ -20,11 +20,21 @@ public interface DocumentUploadRepository extends JpaRepository<DocumentUpload, 
     /** Returns all documents for a student ordered by upload date descending. */
     List<DocumentUpload> findByStudentOrderByUploadedAtDesc(User student);
 
+    /** Returns all documents for a student ordered by upload date descending, paginated. */
+    org.springframework.data.domain.Page<DocumentUpload> findByStudentOrderByUploadedAtDesc(User student, org.springframework.data.domain.Pageable pageable);
+
     /**
      * Returns all documents with SUSPICIOUS status for admin review queue.
+     * (Deprecated: Use findDocumentsForAdminReview instead)
      */
     @Query("SELECT d FROM DocumentUpload d LEFT JOIN FETCH d.student WHERE d.verificationStatus = :status ORDER BY d.uploadedAt ASC")
     List<DocumentUpload> findByVerificationStatusOrderByUploadedAtAsc(@Param("status") VerificationStatus status);
+
+    /**
+     * Returns all unreviewed documents with the specified statuses (e.g. SUSPICIOUS, REJECTED) for the admin review queue.
+     */
+    @Query("SELECT d FROM DocumentUpload d LEFT JOIN FETCH d.student WHERE d.adminReviewed = false AND d.verificationStatus IN :statuses ORDER BY d.uploadedAt ASC")
+    List<DocumentUpload> findDocumentsForAdminReview(@Param("statuses") List<VerificationStatus> statuses);
 
     /**
      * Returns the count of documents pending verification for a student.
@@ -42,5 +52,7 @@ public interface DocumentUploadRepository extends JpaRepository<DocumentUpload, 
             @Param("type") com.scholarlinkgh.entity.DocumentType type,
             org.springframework.data.domain.Pageable pageable);
     long countByStudent(User student);
+    long countByStudentAndVerificationStatus(User student, VerificationStatus status);
     long countByReviewedBy(User reviewer);
+    List<DocumentUpload> findByReviewedBy(User reviewer);
 }

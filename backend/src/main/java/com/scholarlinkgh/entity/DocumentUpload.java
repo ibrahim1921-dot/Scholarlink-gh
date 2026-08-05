@@ -55,6 +55,7 @@ public class DocumentUpload {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private User student;
 
     /**
@@ -137,6 +138,7 @@ public class DocumentUpload {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reviewed_by_admin_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private User reviewedBy;
 
     @PrePersist

@@ -82,6 +82,12 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(userEmail);
 
+                if (!userDetails.isEnabled()) {
+                    SecurityContextHolder.clearContext();
+                    sendUnauthorizedResponse(response, "Account has been suspended.");
+                    return;
+                }
+
                 // Only accept tokens with type=access — refresh tokens cannot be used for auth
                 if (jwtService.isTokenValid(jwt, userDetails, "access")) {
 

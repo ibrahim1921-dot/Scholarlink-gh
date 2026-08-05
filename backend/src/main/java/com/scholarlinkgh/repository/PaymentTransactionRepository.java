@@ -15,4 +15,10 @@ public interface PaymentTransactionRepository extends JpaRepository<PaymentTrans
     Page<PaymentTransaction> findByUserOrderByCreatedAtDesc(User user, Pageable pageable);
     Page<PaymentTransaction> findAllByOrderByCreatedAtDesc(Pageable pageable);
     Page<PaymentTransaction> findByUser_EmailContainingIgnoreCaseOrderByCreatedAtDesc(String email, Pageable pageable);
+    
+    @org.springframework.data.jpa.repository.Query("SELECT COALESCE(SUM(p.amountPesewas), 0) FROM PaymentTransaction p WHERE p.user = :user AND p.status = 'SUCCESS'")
+    Long sumAmountByUser(@org.springframework.data.repository.query.Param("user") User user);
+    
+    long countByUser(User user);
+    java.util.List<PaymentTransaction> findByUser(User user);
 }

@@ -21,6 +21,8 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
 
     Page<AuditLog> findByActionOrderByTimestampDesc(String action, Pageable pageable);
 
+    Page<AuditLog> findByEntityTypeAndEntityIdOrderByTimestampDesc(String entityType, Long entityId, Pageable pageable);
+
     List<AuditLog> findTop50ByOrderByTimestampDesc();
 
     @org.springframework.data.jpa.repository.Query("SELECT a FROM AuditLog a WHERE " +

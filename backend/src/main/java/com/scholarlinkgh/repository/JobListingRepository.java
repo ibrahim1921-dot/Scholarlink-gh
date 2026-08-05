@@ -62,4 +62,5 @@ public interface JobListingRepository extends JpaRepository<JobListing, Long> {
             @Param("workMode") WorkMode workMode,
             Pageable pageable);
     long countByCreatedBy(User user);
+    List<JobListing> findByCreatedBy(User user);
 }

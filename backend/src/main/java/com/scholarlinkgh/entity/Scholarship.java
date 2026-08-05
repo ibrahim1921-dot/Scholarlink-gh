@@ -42,6 +42,7 @@ import java.time.LocalDateTime;
         @Index(name = "idx_scholarships_verified", columnList = "verified")
     }
 )
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Scholarship {
 
     @Id
@@ -198,6 +199,7 @@ public class Scholarship {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private User createdBy;
 
     @PrePersist

@@ -179,7 +179,7 @@ public class PaymentService {
 
         return page.map(tx -> PaymentTransactionResponse.builder()
                 .id(tx.getId())
-                .userEmail(tx.getUser().getEmail())
+                .userEmail(tx.getUser() != null ? tx.getUser().getEmail() : tx.getAnonymizedUserEmail())
                 .type(tx.getType().name())
                 .amountPesewas(tx.getAmountPesewas())
                 .paystackReference(tx.getPaystackReference())
@@ -198,7 +198,7 @@ public class PaymentService {
         
         return page.map(tx -> PaymentTransactionResponse.builder()
                 .id(tx.getId())
-                .userEmail(tx.getUser().getEmail())
+                .userEmail(tx.getUser() != null ? tx.getUser().getEmail() : tx.getAnonymizedUserEmail())
                 .type(tx.getType().name())
                 .amountPesewas(tx.getAmountPesewas())
                 .paystackReference(tx.getPaystackReference())

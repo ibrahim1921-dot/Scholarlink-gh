@@ -231,6 +231,12 @@ public class AuthService {
             throw new RuntimeException("Invalid or expired refresh token");
         }
 
+        if (!user.isEnabled()) {
+            log.warn("Token refresh failed: account is suspended for {}", email);
+            refreshTokenService.revokeAll(user);
+            throw new RuntimeException("Account has been suspended.");
+        }
+
         // Check 4: server-side revocation
         if (!refreshTokenService.matchesActiveToken(user, request.getRefreshToken())) {
             log.warn("Token refresh failed: token revoked or not found in DB for {}", email);

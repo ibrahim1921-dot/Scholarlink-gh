@@ -157,6 +157,21 @@ public class JobService {
     }
 
     @Transactional
+    public ApiResponse activateJob(Long id) {
+        User admin = getCurrentUser();
+        JobListing job = jobListingRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Job listing not found"));
+
+        job.setActive(true);
+        jobListingRepository.save(job);
+        
+        auditService.log(admin.getId(), admin.getEmail(), "ACTIVATE_JOB", "JobListing", job.getId(), job.getTitle());
+        log.info("Admin {} activated job listing: {}", admin.getEmail(), job.getTitle());
+        
+        return ApiResponse.builder().success(true).message("Job listing activated successfully").build();
+    }
+
+    @Transactional
     public ApiResponse deleteJob(Long id) {
         User admin = getCurrentUser();
         JobListing job = jobListingRepository.findById(id)

@@ -23,6 +23,7 @@ com\scholarlinkgh\entity\EmploymentType.class
 com\scholarlinkgh\controller\NotificationController.class
 com\scholarlinkgh\entity\RefreshToken$RefreshTokenBuilder.class
 com\scholarlinkgh\repository\UserRepository.class
+com\scholarlinkgh\dto\AdminUserDetailsOverviewResponse.class
 com\scholarlinkgh\dto\ScholarshipRequest.class
 com\scholarlinkgh\entity\ScholarshipStatus.class
 com\scholarlinkgh\entity\StudentProfile$StudentProfileBuilder.class
@@ -42,6 +43,7 @@ com\scholarlinkgh\entity\ApplicationTracker.class
 com\scholarlinkgh\entity\StudentProfile.class
 com\scholarlinkgh\config\JwtConfig.class
 com\scholarlinkgh\config\DataBackfill.class
+com\scholarlinkgh\entity\AdminNote$AdminNoteBuilder.class
 com\scholarlinkgh\service\ApplicationTrackerService$1.class
 com\scholarlinkgh\service\GeminiAIService.class
 com\scholarlinkgh\controller\AuthController.class
@@ -64,7 +66,9 @@ com\scholarlinkgh\entity\PaymentTransaction$PaymentTransactionBuilder.class
 com\scholarlinkgh\repository\SavedJobRepository.class
 com\scholarlinkgh\controller\AdminExportController.class
 com\scholarlinkgh\repository\EligibilityCheckRepository.class
+com\scholarlinkgh\entity\AdminNote.class
 com\scholarlinkgh\service\UserActivityService.class
+com\scholarlinkgh\dto\UserUpdateRequest.class
 com\scholarlinkgh\repository\StudentProfileRepository.class
 com\scholarlinkgh\controller\AIController.class
 com\scholarlinkgh\dto\InitializePaymentResponse$InitializePaymentResponseBuilder.class
@@ -103,11 +107,13 @@ com\scholarlinkgh\dto\PersonalStatementRequest.class
 com\scholarlinkgh\entity\RefreshToken.class
 com\scholarlinkgh\entity\JobListing$JobListingBuilder.class
 com\scholarlinkgh\service\ScholarshipService.class
+com\scholarlinkgh\dto\AdminNoteResponse.class
 com\scholarlinkgh\config\PaystackConfig.class
 com\scholarlinkgh\dto\PaymentTransactionResponse.class
 com\scholarlinkgh\entity\EligibilityCheck$EligibilityCheckBuilder.class
 com\scholarlinkgh\entity\ApplicationStatus.class
 com\scholarlinkgh\entity\ApplicationTracker$ApplicationTrackerBuilder.class
+com\scholarlinkgh\dto\AdminUserDetailsOverviewResponse$AdminUserDetailsOverviewResponseBuilder.class
 com\scholarlinkgh\dto\ScholarshipMatchResponse.class
 com\scholarlinkgh\service\ApplicationTrackerService.class
 com\scholarlinkgh\repository\ScholarshipReportRepository.class
@@ -124,7 +130,9 @@ com\scholarlinkgh\controller\AdminJobApplicationController.class
 com\scholarlinkgh\entity\PaymentTransaction.class
 com\scholarlinkgh\config\NotificationScheduler.class
 com\scholarlinkgh\service\DocumentVerificationService$1.class
+com\scholarlinkgh\dto\AdminNoteResponse$AdminNoteResponseBuilder.class
 com\scholarlinkgh\dto\EssayReviewRequest.class
+com\scholarlinkgh\repository\AdminNoteRepository.class
 com\scholarlinkgh\service\PaymentService.class
 com\scholarlinkgh\entity\JobApplication$JobApplicationBuilder.class
 com\scholarlinkgh\repository\SavedScholarshipRepository.class
@@ -148,5 +156,6 @@ com\scholarlinkgh\repository\NotificationRepository.class
 com\scholarlinkgh\config\GlobalExceptionHandler.class
 com\scholarlinkgh\entity\JobApplication.class
 com\scholarlinkgh\entity\PaymentStatus.class
+com\scholarlinkgh\dto\AdminNoteRequest.class
 com\scholarlinkgh\entity\ScholarshipReport$ScholarshipReportBuilder.class
 com\scholarlinkgh\dto\JobApplicationResponse.class

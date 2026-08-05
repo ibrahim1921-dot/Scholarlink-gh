@@ -136,4 +136,5 @@ public interface ScholarshipRepository extends JpaRepository<Scholarship, Long> 
         Pageable pageable
     );
     long countByCreatedBy(User user);
+    List<Scholarship> findByCreatedBy(User user);
 }

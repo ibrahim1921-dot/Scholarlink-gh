@@ -21,8 +21,12 @@ public class PaymentTransaction {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private User user;
+
+    @Column(name = "anonymized_user_email")
+    private String anonymizedUserEmail;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

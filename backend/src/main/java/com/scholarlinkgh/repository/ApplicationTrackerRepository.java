@@ -23,6 +23,9 @@ public interface ApplicationTrackerRepository extends JpaRepository<ApplicationT
     /** Returns all trackers for a student ordered by creation date descending. */
     List<ApplicationTracker> findByStudentOrderByCreatedAtDesc(User student);
 
+    /** Returns paginated trackers for a student ordered by creation date descending. */
+    org.springframework.data.domain.Page<ApplicationTracker> findByStudentOrderByCreatedAtDesc(User student, org.springframework.data.domain.Pageable pageable);
+
     /** Finds a specific tracker for a student/scholarship combination. */
     Optional<ApplicationTracker> findByStudentAndScholarship(User student, Scholarship scholarship);
 

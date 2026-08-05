@@ -85,6 +85,16 @@ public class JobController {
         }
     }
 
+    @org.springframework.web.bind.annotation.PutMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> activateJob(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(jobService.activateJob(id));
+        } catch (com.scholarlinkgh.exception.ResourceNotFoundException ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @org.springframework.web.bind.annotation.PutMapping("/{id}/deactivate")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> deactivateJob(@PathVariable Long id) {

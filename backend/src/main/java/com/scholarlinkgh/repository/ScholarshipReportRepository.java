@@ -15,4 +15,5 @@ public interface ScholarshipReportRepository extends JpaRepository<ScholarshipRe
 
     void deleteAllByScholarship(Scholarship scholarship);
     long countByReporter(User reporter);
+    java.util.List<ScholarshipReport> findByReporter(User reporter);
 }

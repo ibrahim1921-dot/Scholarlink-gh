@@ -34,11 +34,52 @@ public class AdminUserController {
         return ResponseEntity.ok(adminUserService.getUsers(search, page, size));
     }
 
+    @org.springframework.web.bind.annotation.PatchMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateUser(
+            @PathVariable Long id,
+            @org.springframework.web.bind.annotation.RequestBody com.scholarlinkgh.dto.UserUpdateRequest request,
+            org.springframework.security.core.Authentication authentication) {
+        try {
+            return ResponseEntity.ok(adminUserService.updateUserDetails(id, request, authentication.getName()));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/suspend")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> suspendUser(@PathVariable Long id, org.springframework.security.core.Authentication authentication) {
+        try {
+            adminUserService.suspendUser(id, authentication.getName());
+            return ResponseEntity.ok(java.util.Map.of("success", true, "message", "User suspended"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> activateUser(@PathVariable Long id, org.springframework.security.core.Authentication authentication) {
+        try {
+            adminUserService.activateUser(id, authentication.getName());
+            return ResponseEntity.ok(java.util.Map.of("success", true, "message", "User activated"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
+    }
+
     @PostMapping("/{id}/promote")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> promoteToAdmin(@PathVariable Long id) {
+    public ResponseEntity<?> promoteToAdmin(@PathVariable Long id, org.springframework.security.core.Authentication authentication) {
         try {
-            UserResponse response = adminUserService.updateUserRole(id, Role.ADMIN);
+            com.scholarlinkgh.dto.UserResponse response = adminUserService.updateUserRole(id, Role.ADMIN, authentication.getName());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.notFound().build();
@@ -49,9 +90,9 @@ public class AdminUserController {
 
     @PostMapping("/{id}/demote")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> demoteToStudent(@PathVariable Long id) {
+    public ResponseEntity<?> demoteToStudent(@PathVariable Long id, org.springframework.security.core.Authentication authentication) {
         try {
-            UserResponse response = adminUserService.updateUserRole(id, Role.STUDENT);
+            com.scholarlinkgh.dto.UserResponse response = adminUserService.updateUserRole(id, Role.STUDENT, authentication.getName());
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.notFound().build();
@@ -66,10 +107,11 @@ public class AdminUserController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> deleteUser(
             @PathVariable Long id,
+            @RequestParam(defaultValue = "false") boolean force,
             org.springframework.security.core.Authentication authentication) {
         try {
             String currentUserEmail = authentication.getName();
-            return ResponseEntity.ok(adminUserService.deleteUser(id, currentUserEmail));
+            return ResponseEntity.ok(adminUserService.deleteUser(id, currentUserEmail, force));
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.notFound().build();
         } catch (IllegalStateException ex) {
@@ -130,5 +172,102 @@ public class AdminUserController {
                 com.scholarlinkgh.dto.ApiResponse.builder()
                     .success(false).message(ex.getMessage()).build());
         }
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<com.scholarlinkgh.dto.AdminUserDetailsOverviewResponse> getUserDetailsOverview(@PathVariable Long id) {
+        return ResponseEntity.ok(adminUserService.getUserDetailsOverview(id));
+    }
+
+    @GetMapping("/{id}/documents")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<com.scholarlinkgh.entity.DocumentUpload>> getUserDocuments(
+            @PathVariable Long id, 
+            @RequestParam(defaultValue = "0") int page, 
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminUserService.getUserDocuments(id, page, size));
+    }
+
+    @GetMapping("/{id}/payments")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<com.scholarlinkgh.entity.PaymentTransaction>> getUserPayments(
+            @PathVariable Long id, 
+            @RequestParam(defaultValue = "0") int page, 
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminUserService.getUserPayments(id, page, size));
+    }
+
+    @GetMapping("/{id}/activity")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<com.scholarlinkgh.entity.AuditLog>> getUserActivity(
+            @PathVariable Long id, 
+            @RequestParam(defaultValue = "0") int page, 
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminUserService.getUserActivity(id, page, size));
+    }
+
+    @GetMapping("/{id}/scholarships")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getUserScholarships(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            return ResponseEntity.ok(adminUserService.getUserScholarships(id, page, size));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{id}/jobs")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> getUserJobs(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        try {
+            return ResponseEntity.ok(adminUserService.getUserJobs(id, page, size));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @GetMapping("/{id}/notes")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<com.scholarlinkgh.dto.AdminNoteResponse>> getAdminNotes(
+            @PathVariable Long id, 
+            @RequestParam(defaultValue = "0") int page, 
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminUserService.getAdminNotes(id, page, size));
+    }
+
+    @PostMapping("/{id}/notes")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<com.scholarlinkgh.dto.AdminNoteResponse> addAdminNote(
+            @PathVariable Long id, 
+            @org.springframework.web.bind.annotation.RequestBody com.scholarlinkgh.dto.AdminNoteRequest request, 
+            org.springframework.security.core.Authentication authentication) {
+        return ResponseEntity.ok(adminUserService.addAdminNote(id, request, authentication.getName()));
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/{id}/notes/{noteId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<com.scholarlinkgh.dto.AdminNoteResponse> updateAdminNote(
+            @PathVariable Long id, 
+            @PathVariable Long noteId, 
+            @org.springframework.web.bind.annotation.RequestBody com.scholarlinkgh.dto.AdminNoteRequest request, 
+            org.springframework.security.core.Authentication authentication) {
+        return ResponseEntity.ok(adminUserService.updateAdminNote(noteId, request, authentication.getName()));
+    }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{id}/notes/{noteId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> deleteAdminNote(
+            @PathVariable Long id, 
+            @PathVariable Long noteId, 
+            org.springframework.security.core.Authentication authentication) {
+        adminUserService.deleteAdminNote(noteId, authentication.getName());
+        return ResponseEntity.ok().build();
     }
 }

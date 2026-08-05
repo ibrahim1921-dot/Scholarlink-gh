@@ -21,6 +21,9 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     @EntityGraph(attributePaths = {"job", "job.requirements", "student", "documents"})
     List<JobApplication> findByStudentOrderByAppliedAtDesc(User student);
 
+    @EntityGraph(attributePaths = {"job", "student"})
+    org.springframework.data.domain.Page<JobApplication> findByStudentOrderByAppliedAtDesc(User student, org.springframework.data.domain.Pageable pageable);
+
     /** Finds a specific application for uniqueness check. */
     Optional<JobApplication> findByStudentAndJob(User student, JobListing job);
 
