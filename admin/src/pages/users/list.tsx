@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { useTable, useCustomMutation, useInvalidate } from "@refinedev/core";
+import { useTable, useCustomMutation, useInvalidate, useNavigation } from "@refinedev/core";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, ShieldAlert, ShieldCheck, Trash2, Sparkles } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ShieldAlert, ShieldCheck, Trash2, Sparkles, Eye } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,8 +34,10 @@ export const UserList: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [actionUser, setActionUser] = useState<any>(null);
-  const [actionType, setActionType] = useState<"promote" | "demote" | "delete" | null>(null);
+  const [actionType, setActionType] = useState<"promote" | "demote" | "delete" | "force_delete" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [forceDeleteEmail, setForceDeleteEmail] = useState("");
+  const { show } = useNavigation();
 
   const [grantUser, setGrantUser] = useState<any>(null);
   const [grantAmount, setGrantAmount] = useState("");
@@ -60,23 +62,48 @@ export const UserList: React.FC = () => {
     if (!actionUser || !actionType) return;
     setActionError(null);
     
+    let url = `/admin/users/${actionUser.id}`;
+    let method: "post" | "delete" = "post";
+    
+    if (actionType === "promote" || actionType === "demote") {
+        url = `/admin/users/${actionUser.id}/${actionType}`;
+    } else if (actionType === "delete") {
+        method = "delete";
+    } else if (actionType === "force_delete") {
+        method = "delete";
+        url = `/admin/users/${actionUser.id}?force=true`;
+    }
+    
     mutate(
       {
-        url: actionType === "delete" ? `/admin/users/${actionUser.id}` : `/admin/users/${actionUser.id}/${actionType}`,
-        method: actionType === "delete" ? "delete" : "post",
+        url,
+        method,
         values: {},
       },
       {
         onSuccess: () => {
           setActionUser(null);
           setActionType(null);
+          setForceDeleteEmail("");
           invalidate({
             resource: "users",
             invalidates: ["list"],
           });
         },
         onError: (error: any) => {
-          setActionError(error?.response?.data?.message || error?.message || "An error occurred");
+          const errMsg = error?.response?.data?.message || error?.message || "";
+          const isConflict = error?.response?.status === 409 || 
+                             error?.statusCode === 409 || 
+                             error?.status === 409 || 
+                             errMsg.includes("Cannot delete: user has");
+                             
+          if (actionType === "delete" && isConflict) {
+             setActionType("force_delete");
+             setForceDeleteEmail("");
+             setActionError(errMsg || "Dependencies exist");
+          } else {
+             setActionError(errMsg || "An error occurred");
+          }
         }
       }
     );
@@ -125,9 +152,19 @@ export const UserList: React.FC = () => {
                 </TableRow>
               ) : (
                 data?.data.map((user: any) => (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.id} className="hover:bg-muted/50 transition-colors">
                     <TableCell className="font-medium">{user.id}</TableCell>
-                    <TableCell>{user.email}</TableCell>
+                    <TableCell>
+                      <span 
+                        className="font-medium text-primary hover:underline cursor-pointer flex items-center"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          show("users", user.id);
+                        }}
+                      >
+                        {user.email}
+                      </span>
+                    </TableCell>
                     <TableCell>
                       {user.role === "ADMIN" ? (
                         <span className="bg-secondary text-secondary-foreground text-xs px-2.5 py-1 rounded-full font-semibold border border-secondary">
@@ -146,7 +183,18 @@ export const UserList: React.FC = () => {
                         <span className="text-destructive text-sm font-medium">Disabled</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right flex items-center justify-end">
+                    <TableCell className="text-right flex items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => show("users", user.id)}
+                        className="mr-2 bg-primary/90 hover:bg-primary"
+                        title="View User Workspace"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                      
                       {user.role === "STUDENT" ? (
                         <Button
                           variant="outline"
@@ -176,35 +224,8 @@ export const UserList: React.FC = () => {
                           Demote
                         </Button>
                       )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setActionUser(user);
-                          setActionType("delete");
-                          setActionError(null);
-                        }}
-                        className="border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                      >
-                        <Trash2 className="h-4 w-4 mr-1" />
-                        Delete
-                      </Button>
-                      {user.role === "STUDENT" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setGrantUser(user);
-                            setGrantAmount("");
-                            setGrantError(null);
-                            setGrantSuccess(null);
-                          }}
-                          className="ml-2 border-amber-500 text-amber-600 hover:bg-amber-500 hover:text-white"
-                        >
-                          <Sparkles className="h-4 w-4 mr-1" />
-                          Grant Credits
-                        </Button>
-                      )}
+
+
                     </TableCell>
                   </TableRow>
                 ))
@@ -243,95 +264,49 @@ export const UserList: React.FC = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {actionType === "promote" ? "Promote User to Admin?" : actionType === "demote" ? "Demote Admin to Student?" : "Delete User?"}
+              {actionType === "promote" ? "Promote User to Admin?" : 
+               actionType === "demote" ? "Demote Admin to Student?" : 
+               actionType === "force_delete" ? "Force Delete User?" : "Delete User?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {actionType === "promote"
                 ? `Are you sure you want to grant administrator privileges to ${actionUser?.email}? They will gain full access to the admin dashboard.`
                 : actionType === "demote"
                 ? `Are you sure you want to revoke administrator privileges from ${actionUser?.email}? They will lose access to the admin dashboard.`
-                : `This will permanently delete ${actionUser?.email}. This cannot be undone.`}
+                : actionType === "force_delete"
+                ? "This will permanently delete: applications, documents, and this user's entire account. Payment records will be kept but anonymized."
+                : `Are you sure you want to delete ${actionUser?.email}? This action cannot be undone.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {actionType === "force_delete" && (
+             <div className="py-4">
+               <p className="text-sm font-medium mb-2">Type <strong>{actionUser?.email}</strong> to confirm:</p>
+               <Input 
+                 value={forceDeleteEmail} 
+                 onChange={(e) => setForceDeleteEmail(e.target.value)} 
+                 placeholder="Enter user email to force delete"
+               />
+             </div>
+          )}
           {actionError && (
             <div className="text-sm font-medium text-destructive mt-2">
               {actionError}
             </div>
           )}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => { setActionType(null); setActionUser(null); }}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleAction}
-              className={actionType === "demote" || actionType === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+              disabled={actionType === "force_delete" && forceDeleteEmail !== actionUser?.email}
+              className={actionType === "demote" || actionType === "delete" || actionType === "force_delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
             >
-              {actionType === "delete" ? "Delete" : "Confirm"}
+              Confirm
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Grant AI Credits Dialog */}
-      <AlertDialog open={!!grantUser} onOpenChange={(open) => !open && setGrantUser(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Grant AI Credits</AlertDialogTitle>
-            <AlertDialogDescription>
-              Grant AI generation credits to <strong>{grantUser?.email}</strong>. Enter the number of credits to add.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="py-4">
-            <Input
-              type="number"
-              min="1"
-              placeholder="Number of credits"
-              value={grantAmount}
-              onChange={(e) => setGrantAmount(e.target.value)}
-            />
-          </div>
-          {grantError && (
-            <div className="text-sm font-medium text-destructive">
-              {grantError}
-            </div>
-          )}
-          {grantSuccess && (
-            <div className="text-sm font-medium text-green-600">
-              {grantSuccess}
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                const amount = parseInt(grantAmount);
-                if (!amount || amount <= 0) {
-                  setGrantError("Please enter a valid positive number.");
-                  return;
-                }
-                setGrantError(null);
-                mutate(
-                  {
-                    url: `/admin/users/${grantUser.id}/grant-credits`,
-                    method: "post",
-                    values: { amount },
-                  },
-                  {
-                    onSuccess: (data: any) => {
-                      setGrantSuccess(`Granted ${amount} credits. New balance: ${data?.data?.aiCreditsRemaining ?? 'updated'}`);
-                      invalidate({ resource: "users", invalidates: ["list"] });
-                      setTimeout(() => setGrantUser(null), 1500);
-                    },
-                    onError: (error: any) => {
-                      setGrantError(error?.response?.data?.message || error?.message || "Failed to grant credits");
-                    }
-                  }
-                );
-              }}
-            >
-              Grant Credits
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+
     </Card>
   );
 };

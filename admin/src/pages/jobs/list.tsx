@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, ChevronLeft, ChevronRight, Edit, Plus, Trash2, XCircle, Download, Loader2 } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Edit, Plus, Trash2, XCircle, CheckCircle, Download, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,7 +38,7 @@ export const JobList: React.FC = () => {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [actionJob, setActionJob] = useState<any>(null);
-  const [actionType, setActionType] = useState<"deactivate" | "delete" | null>(null);
+  const [actionType, setActionType] = useState<"activate" | "deactivate" | "delete" | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<number | null>(null);
 
@@ -90,7 +90,7 @@ export const JobList: React.FC = () => {
     
     mutate(
       {
-        url: actionType === "delete" ? `/jobs/${actionJob.id}` : `/jobs/${actionJob.id}/deactivate`,
+        url: actionType === "delete" ? `/jobs/${actionJob.id}` : actionType === "activate" ? `/jobs/${actionJob.id}/activate` : `/jobs/${actionJob.id}/deactivate`,
         method: actionType === "delete" ? "delete" : "put",
         values: {},
       },
@@ -195,7 +195,7 @@ export const JobList: React.FC = () => {
                         <Edit className="h-4 w-4 mr-1" />
                         Edit
                       </Button>
-                      {job.active && (
+                      {job.active ? (
                         <Button
                           variant="outline"
                           size="sm"
@@ -208,6 +208,20 @@ export const JobList: React.FC = () => {
                         >
                           <XCircle className="h-4 w-4 mr-1" />
                           Deactivate
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setActionJob(job);
+                            setActionType("activate");
+                            setActionError(null);
+                          }}
+                          className="mr-2 border-success text-success hover:bg-success hover:text-success-foreground"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Activate
                         </Button>
                       )}
                       <Button
@@ -261,11 +275,13 @@ export const JobList: React.FC = () => {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {actionType === "delete" ? "Delete Job Listing?" : "Deactivate Job Listing?"}
+              {actionType === "delete" ? "Delete Job Listing?" : actionType === "activate" ? "Reactivate Job Listing?" : "Deactivate Job Listing?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {actionType === "delete"
                 ? `This will permanently delete "${actionJob?.title}" at ${actionJob?.company}. This cannot be undone.`
+                : actionType === "activate"
+                ? `Are you sure you want to reactivate "${actionJob?.title}" at ${actionJob?.company}? It will become visible to students again.`
                 : `Are you sure you want to deactivate "${actionJob?.title}" at ${actionJob?.company}? It will no longer be visible to students.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -278,9 +294,9 @@ export const JobList: React.FC = () => {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleAction}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className={actionType === "delete" || actionType === "deactivate" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : "bg-success text-success-foreground hover:bg-success/90"}
             >
-              {actionType === "delete" ? "Delete" : "Deactivate"}
+              {actionType === "delete" ? "Delete" : actionType === "activate" ? "Activate" : "Deactivate"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

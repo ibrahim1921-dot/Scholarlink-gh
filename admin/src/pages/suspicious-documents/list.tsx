@@ -59,7 +59,7 @@ export const SuspiciousDocumentList: React.FC = () => {
   return (
     <Card className="shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-6">
-        <CardTitle className="text-2xl text-primary font-bold">Suspicious Documents</CardTitle>
+        <CardTitle className="text-2xl text-primary font-bold">Review Queue (Suspicious & Rejected)</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="rounded-md border border-border">
@@ -84,7 +84,7 @@ export const SuspiciousDocumentList: React.FC = () => {
               ) : data?.data?.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                    No suspicious documents found
+                    No documents pending review
                   </TableCell>
                 </TableRow>
               ) : (
@@ -178,7 +178,7 @@ export const SuspiciousDocumentList: React.FC = () => {
             </AlertDialogTitle>
             <AlertDialogDescription>
               {actionType === "VERIFIED"
-                ? `Are you sure you want to verify this document from ${actionDoc?.student_email}? This overrides the AI's suspicion.`
+                ? `Are you sure you want to verify this document from ${actionDoc?.student_email}? This overrides the AI's assessment.`
                 : `Are you sure you want to reject this document from ${actionDoc?.student_email}?`}
             </AlertDialogDescription>
           </AlertDialogHeader>

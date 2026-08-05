@@ -6,18 +6,16 @@ import { dataProvider } from "./providers/dataProvider";
 import { Layout } from "./components/layout";
 import { Login } from "./pages/login";
 import { UserList } from "./pages/users/list";
+import { UserShow } from "./pages/users/show";
 import { JobList } from "./pages/jobs/list";
 import { JobCreate } from "./pages/jobs/create";
 import { JobEdit } from "./pages/jobs/edit";
 import { ScholarshipList } from "./pages/scholarships/list";
 import { ScholarshipCreate } from "./pages/scholarships/create";
 import { ScholarshipEdit } from "./pages/scholarships/edit";
-import { JobApplicationList } from "./pages/job-applications/list";
-import { ScholarshipApplicationList } from "./pages/scholarship-applications/list";
 import { PendingScholarshipList } from "./pages/pending-scholarships/list";
 import { SuspiciousDocumentList } from "./pages/suspicious-documents/list";
 import { AuditLogList } from "./pages/audit-logs/list";
-import { AdminDocumentList } from "./pages/documents/list";
 import { DashboardPage } from "./pages/dashboard";
 import { PaymentList } from "./pages/payments/list";
 
@@ -39,6 +37,7 @@ function App() {
           {
             name: "users",
             list: "/users",
+            show: "/users/:id",
             meta: {
               label: "Users",
             },
@@ -62,20 +61,6 @@ function App() {
             },
           },
           {
-            name: "job-applications",
-            list: "/job-applications",
-            meta: {
-              label: "Job Applications",
-            },
-          },
-          {
-            name: "scholarship-applications",
-            list: "/scholarship-applications",
-            meta: {
-              label: "Scholarship Applications",
-            },
-          },
-          {
             name: "pending-scholarships",
             list: "/pending-scholarships",
             meta: {
@@ -94,13 +79,6 @@ function App() {
             list: "/audit-logs",
             meta: {
               label: "Audit Logs",
-            },
-          },
-          {
-            name: "admin-documents",
-            list: "/admin-documents",
-            meta: {
-              label: "Documents",
             },
           },
           {
@@ -137,6 +115,7 @@ function App() {
 
             <Route path="/users">
               <Route index element={<UserList />} />
+              <Route path=":id" element={<UserShow />} />
             </Route>
 
             <Route path="/jobs">
@@ -150,15 +129,6 @@ function App() {
               <Route path="create" element={<ScholarshipCreate />} />
               <Route path="edit/:id" element={<ScholarshipEdit />} />
             </Route>
-
-            <Route path="/job-applications">
-              <Route index element={<JobApplicationList />} />
-            </Route>
-
-            <Route path="/scholarship-applications">
-              <Route index element={<ScholarshipApplicationList />} />
-            </Route>
-
             <Route path="/pending-scholarships">
               <Route index element={<PendingScholarshipList />} />
             </Route>
@@ -170,11 +140,6 @@ function App() {
             <Route path="/audit-logs">
               <Route index element={<AuditLogList />} />
             </Route>
-
-            <Route path="/admin-documents">
-              <Route index element={<AdminDocumentList />} />
-            </Route>
-
             <Route path="/payments">
               <Route index element={<PaymentList />} />
             </Route>
